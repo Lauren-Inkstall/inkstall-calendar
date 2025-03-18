@@ -239,7 +239,7 @@ const CalanderLeft = ({
               key={teacher.id}
               dense
               button
-              onClick={() => handleToggle(teacher.id)}
+              onClick={() => userRole !== 'teacher' && handleToggle(teacher.id)}
               sx={{
                 py: 0.5,
                 px: 1,
@@ -249,6 +249,8 @@ const CalanderLeft = ({
                 <Checkbox
                   edge="start"
                   checked={teacher.checked}
+                  onChange={() => userRole !== 'teacher' && onToggleTeacher(teacher.id)}
+                  disabled={userRole === 'teacher'} // Disable checkbox for teachers
                   tabIndex={-1}
                   disableRipple
                   size="small"
@@ -257,20 +259,20 @@ const CalanderLeft = ({
                     '&.Mui-checked': {
                       color: teacher.color,
                     },
+                    '&.Mui-disabled': {
+                      opacity: 0.5,
+                      pointerEvents: 'none',
+                    },
                     p: 0.5,
                   }}
                 />
               </ListItemIcon>
               <ListItemText
                 primary={teacher.name}
-                primaryTypographyProps={{
-                  style: {
-                    textDecoration: teacher.checked ? 'none' : 'line-through',
-                    color: teacher.checked ? 'inherit' : '#9e9e9e',
-                    fontSize: '0.85rem',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                sx={{
+                  m: 0,
+                  '& .MuiTypography-root': {
+                    fontSize: '0.875rem',
                   },
                 }}
               />

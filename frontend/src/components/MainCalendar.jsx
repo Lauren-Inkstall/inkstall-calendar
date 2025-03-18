@@ -205,16 +205,39 @@ const MainCalendar = () => {
 
   useEffect(() => {
     if (contextTeachers) {
-      const formattedTeachers = contextTeachers.map((teacher, index) => ({
-        id: teacher._id,
-        name: teacher.teacherName,
-        email: teacher.email || teacher.teacherEmail || '',
-        checked: true,
-        color: defaultColors[index % defaultColors.length]
-      }));
+      const formattedTeachers = contextTeachers.map((teacher, index) => {
+        // For teacher role, only set checked=true for the current user's teacher
+        const isCurrentUserTeacher = userRole === 'teacher' && (
+          (currentUserId && teacher._id === currentUserId) ||
+          (currentUserName && teacher.teacherName.toLowerCase() === currentUserName.toLowerCase()) ||
+          (localStorage.getItem('userEmail') && teacher.email && 
+           teacher.email.toLowerCase() === localStorage.getItem('userEmail').toLowerCase())
+        );
+        
+        // For admin/superadmin, all teachers are checked by default
+        const shouldBeChecked = userRole === 'teacher' ? isCurrentUserTeacher : true;
+        
+        return {
+          id: teacher._id,
+          name: teacher.teacherName,
+          email: teacher.email || teacher.teacherEmail || '',
+          checked: shouldBeChecked,
+          color: defaultColors[index % defaultColors.length]
+        };
+      });
+      
+      // Debug log the formatted teachers
+      console.log('MainCalendar - Formatted teachers with checked status:', {
+        formattedTeachers,
+        userRole,
+        currentUserId,
+        currentUserName,
+        userEmail: localStorage.getItem('userEmail')
+      });
+      
       setTeachers(formattedTeachers);
     }
-  }, [contextTeachers]);
+  }, [contextTeachers, userRole, currentUserId, currentUserName]);
 
   useEffect(() => {
     if (isIPhoneSE) {
@@ -310,6 +333,12 @@ const MainCalendar = () => {
   };
 
   const handleToggleTeacher = (id) => {
+    // For teacher role, don't allow toggling
+    if (userRole === 'teacher') {
+      console.log('Teacher role cannot toggle teacher visibility');
+      return;
+    }
+    
     setTeachers((prevTeachers) =>
       prevTeachers.map((teacher) =>
         teacher.id === id ? { ...teacher, checked: !teacher.checked } : teacher,
