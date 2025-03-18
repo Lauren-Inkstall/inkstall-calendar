@@ -607,7 +607,9 @@ const CalanderRight = ({
   const renderMonthView = () => {
     return (
       <Box sx={{ p: 2 }}>
-        <Month currentDate={currentDate} events={getMonthEvents()} />
+        <Box sx={{ position: 'relative' }}>
+          <Month currentDate={currentDate} events={getMonthEvents()} />
+        </Box>
       </Box>
     );
   };
@@ -713,117 +715,141 @@ const CalanderRight = ({
             }}
           />
 
-          {/* Empty top-left cell */}
+          {/* Header row - now with sticky positioning */}
           <Box
             sx={{
-              gridColumn: '1 / 2',
-              gridRow: '1 / 2',
-              borderRight: '1px solid #e0e0e0',
-              borderBottom: '1px solid #e0e0e0',
-              backgroundColor: '#f5f5f5',
-              p: isIPhoneSE ? 0.5 : 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: 'contents',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10,
+              '& > *': {
+                position: 'sticky',
+                top: 0,
+                zIndex: 10,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }
             }}
           >
-            <Typography variant="body2" fontWeight="bold">
-              Time
-            </Typography>
-          </Box>
-
-          {/* Teacher Headers - only show if there are visible teachers */}
-          {visibleTeachers.length > 0 ? (
-            visibleTeachers.map((teacher, index) => {
-              const onLeave = isTeacherOnLeave(teacher.id);
-
-              return (
-                <Box
-                  key={teacher.id}
-                  sx={{
-                    gridColumn: `${index + 2} / ${index + 3}`,
-                    gridRow: '1 / 2',
-                    borderRight:
-                      index < visibleTeachers.length - 1
-                        ? '1px solid #e0e0e0'
-                        : 'none',
-                    borderBottom: '1px solid #e0e0e0',
-                    backgroundColor: '#f5f5f5',
-                    p: isIPhoneSE ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    position: 'relative',
-                    transition: 'all 0.2s ease-in-out',
-                    overflow: 'hidden',
-                    ...(onLeave && {
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '3px',
-                        backgroundColor: '#f44336',
-                      },
-                    }),
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: isIPhoneSE ? 30 : 40,
-                      height: isIPhoneSE ? 30 : 40,
-                      borderRadius: '50%',
-                      backgroundColor: teacher.color || '#ccc',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      mb: isIPhoneSE ? 0.5 : 1,
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      fontSize: isIPhoneSE ? '0.7rem' : '0.8rem',
-                    }}
-                  >
-                    {teacher.name
-                      .split(' ')
-                      .map((part) => part[0])
-                      .join('')}
-                  </Box>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 'bold',
-                      color: 'text.primary',
-                      fontSize: isIPhoneSE ? '0.7rem' : '0.8rem'
-                    }}
-                    noWrap
-                  >
-                    {teacher.name}
-                  </Typography>
-                </Box>
-              );
-            })
-          ) : (
-            // Empty header when no teachers are selected
+            {/* Empty top-left cell */}
             <Box
               sx={{
-                gridColumn: '2 / 3',
+                gridColumn: '1 / 2',
                 gridRow: '1 / 2',
+                borderRight: '1px solid #e0e0e0',
                 borderBottom: '1px solid #e0e0e0',
                 backgroundColor: '#f5f5f5',
-                p: 1,
+                p: isIPhoneSE ? 0.5 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                position: 'sticky',
+                top: 0,
+                zIndex: 10,
               }}
             >
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                No teachers selected
+              <Typography variant="body2" fontWeight="bold">
+                Time
               </Typography>
             </Box>
-          )}
+
+            {/* Teacher Headers - only show if there are visible teachers */}
+            {visibleTeachers.length > 0 ? (
+              visibleTeachers.map((teacher, index) => {
+                const onLeave = isTeacherOnLeave(teacher.id);
+
+                return (
+                  <Box
+                    key={teacher.id}
+                    sx={{
+                      gridColumn: `${index + 2} / ${index + 3}`,
+                      gridRow: '1 / 2',
+                      borderRight:
+                        index < visibleTeachers.length - 1
+                          ? '1px solid #e0e0e0'
+                          : 'none',
+                      borderBottom: '1px solid #e0e0e0',
+                      backgroundColor: '#f5f5f5',
+                      p: isIPhoneSE ? 0.5 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10,
+                      transition: 'all 0.2s ease-in-out',
+                      overflow: 'hidden',
+                      ...(onLeave && {
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          backgroundColor: '#f44336',
+                        },
+                      }),
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: isIPhoneSE ? 30 : 40,
+                        height: isIPhoneSE ? 30 : 40,
+                        borderRadius: '50%',
+                        backgroundColor: teacher.color || '#ccc',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        mb: isIPhoneSE ? 0.5 : 1,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        fontSize: isIPhoneSE ? '0.7rem' : '0.8rem',
+                      }}
+                    >
+                      {teacher.name
+                        .split(' ')
+                        .map((part) => part[0])
+                        .join('')}
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 'bold',
+                        color: 'text.primary',
+                        fontSize: isIPhoneSE ? '0.7rem' : '0.8rem'
+                      }}
+                      noWrap
+                    >
+                      {teacher.name}
+                    </Typography>
+                  </Box>
+                );
+              })
+            ) : (
+              // Empty header when no teachers are selected
+              <Box
+                sx={{
+                  gridColumn: '2 / 3',
+                  gridRow: '1 / 2',
+                  borderBottom: '1px solid #e0e0e0',
+                  backgroundColor: '#f5f5f5',
+                  p: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 10,
+                }}
+              >
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  No teachers selected
+                </Typography>
+              </Box>
+            )}
+          </Box>
 
           {/* Hour cells - always show */}
           {hours.map((hour) => {
@@ -841,6 +867,9 @@ const CalanderRight = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10,
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: isIPhoneSE ? '0.7rem' : '0.8rem' }}>

@@ -167,8 +167,8 @@ const CalanderLeft = ({
         height: '100vh',
         width: '250px',
         display: 'flex',
-        flexDirection: 'column',
         p: 1,
+        flexDirection: 'column',
         borderRight: '1px solid #e0e0e0',
       }}
     >
@@ -181,7 +181,7 @@ const CalanderLeft = ({
           onClick={handleOpenEventForm}
           sx={{
             width: '130px',
-            mb: 2,
+            mb: 1,
             textTransform: 'none',
             fontSize: '0.85rem',
             p: 1,
@@ -201,7 +201,7 @@ const CalanderLeft = ({
         </Button>
       )}
       {/* Mini Calendar */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mt: canCreateEvents ? 0 : 0, mr: 1}}>
         <MiniCalendar selectedDate={selectedDate} onDateSelect={onDateSelect} />
       </Box>
 

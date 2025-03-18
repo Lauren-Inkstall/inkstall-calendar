@@ -18,7 +18,7 @@ const MiniCalendar = ({ onDateSelect }) => {
       sx={{ 
         mb: 2,
         '& .react-calendar': {
-          border: 'none',
+          border: '1px solid #e0e0e0',
           width: '100%',
           backgroundColor: 'transparent',
           fontFamily: 'inherit'

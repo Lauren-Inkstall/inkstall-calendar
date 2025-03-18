@@ -12,7 +12,10 @@ import {
   Stack,
   Select,
   MenuItem,
-  IconButton
+  IconButton,
+  InputAdornment,
+  TextField,
+  Collapse
 } from '@mui/material';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -37,6 +40,9 @@ const MobileAgendaView = ({
   const [viewType, setViewType] = useState('agenda');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredEvents, setFilteredEvents] = useState({});
   const theme = useTheme();
 
   // Update current date when selectedDate changes
@@ -102,7 +108,108 @@ const MobileAgendaView = ({
     });
     
     setGroupedEvents(grouped);
+    setFilteredEvents(grouped); // Initialize filtered events with all events
   }, [events, currentDate, userRole, currentTeacherId]);
+
+  // Filter events based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredEvents(groupedEvents);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = {};
+
+    // Loop through each date in grouped events
+    Object.keys(groupedEvents).forEach(dateKey => {
+      // Filter events for this date
+      const matchingEvents = groupedEvents[dateKey].filter(event => {
+        // Check event title
+        if (event.title && event.title.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Check teacher name
+        if (event.teacher) {
+          const teacherName = typeof event.teacher === 'object' 
+            ? (event.teacher.name || '') 
+            : event.teacher;
+          
+          if (teacherName.toLowerCase().includes(query)) {
+            return true;
+          }
+        }
+        
+        // Check description
+        if (event.description && event.description.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Check students
+        if (event.students && event.students.length > 0) {
+          return event.students.some(student => {
+            const studentName = typeof student === 'object' 
+              ? (student.name || '') 
+              : student;
+            
+            return studentName.toLowerCase().includes(query);
+          });
+        }
+        
+        return false;
+      });
+      
+      // Only add dates with matching events
+      if (matchingEvents.length > 0) {
+        filtered[dateKey] = matchingEvents;
+      }
+    });
+    
+    setFilteredEvents(filtered);
+  }, [searchQuery, groupedEvents]);
+
+  // Scroll to current date events when component mounts or date changes
+  useEffect(() => {
+    // Function to scroll to current date's events
+    const scrollToCurrentDate = () => {
+      const currentDateStr = currentDate.toISOString().split('T')[0];
+      const currentDateElement = document.getElementById(`date-${currentDateStr}`);
+      
+      if (currentDateElement) {
+        // Use scrollIntoView with behavior: 'smooth' for a smooth scrolling effect
+        // and block: 'center' to center the element vertically
+        currentDateElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    };
+
+    // Small delay to ensure DOM is fully rendered
+    const timeoutId = setTimeout(scrollToCurrentDate, 100);
+    
+    // Clean up timeout
+    return () => clearTimeout(timeoutId);
+  }, [currentDate, filteredEvents]);
+
+  // Toggle search box
+  const toggleSearch = () => {
+    setSearchOpen(!searchOpen);
+    if (searchOpen) {
+      setSearchQuery(''); // Clear search when closing
+    }
+  };
+
+  // Handle search input change
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
 
   // Handle view type change
   const handleViewChange = (event) => {
@@ -266,7 +373,7 @@ const MobileAgendaView = ({
 
   return (
     <Box sx={{ height: '100%', overflow: 'auto', bgcolor: 'white', color: '#333' }}>
-      {/* Header with view selector and avatar */}
+      {/* Header with search and avatar */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -275,225 +382,285 @@ const MobileAgendaView = ({
         borderBottom: '1px solid #e0e0e0',
         bgcolor: '#f5f5f5'
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {/* View Type Dropdown */}
-          <Select
-            value={viewType}
-            onChange={handleViewChange}
-            size="small"
-            sx={{
-              minWidth: 120,
-              '& .MuiSelect-select': {
-                py: 1,
-                bgcolor: 'white'
+        {/* Search button on left */}
+        <IconButton size="small" sx={{ color: '#555' }} onClick={toggleSearch}>
+          <SearchIcon />
+        </IconButton>
+        
+        {/* Date with navigation in center */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          gap: 1
+        }}>
+          <IconButton 
+            size="small" 
+            onClick={() => {
+              const prevDate = new Date(currentDate);
+              prevDate.setDate(currentDate.getDate() - 1);
+              setCurrentDate(prevDate);
+            }}
+            sx={{ color: '#555' }}
+          >
+            <NavigateBeforeIcon />
+          </IconButton>
+          
+          <Box 
+            onClick={toggleCalendar}
+            sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              '&:hover': {
+                opacity: 0.8
               }
             }}
           >
-            <MenuItem value="day">Day</MenuItem>
-            <MenuItem value="week">Week</MenuItem>
-            <MenuItem value="month">Month</MenuItem>
-            <MenuItem value="agenda">Agenda</MenuItem>
-          </Select>
-
-          {/* Current Date Display */}
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              color: '#555', 
-              fontWeight: 'medium' 
-            }}
-          >
-            {currentDate.toLocaleDateString('en-US', { 
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric'
-            })}
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton size="small" sx={{ color: '#555' }}>
-            <SearchIcon />
-          </IconButton>
-          
-          <IconButton size="small" sx={{ p: 0 }}>
-            <Avatar 
+            <Typography 
+              variant="subtitle1" 
               sx={{ 
-                width: 32, 
-                height: 32, 
-                bgcolor: '#f57c00',
-                fontSize: '0.875rem'
+                color: '#555', 
+                fontWeight: 'medium',
+                textAlign: 'center',
+                minWidth: '150px'
               }}
             >
-              A
-            </Avatar>
+              {currentDate.toLocaleDateString('en-US', { 
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </Typography>
+            <KeyboardArrowDownIcon fontSize="small" sx={{ color: '#555', ml: 0.5 }} />
+          </Box>
+          
+          <IconButton 
+            size="small" 
+            onClick={() => {
+              const nextDate = new Date(currentDate);
+              nextDate.setDate(currentDate.getDate() + 1);
+              setCurrentDate(nextDate);
+            }}
+            sx={{ color: '#555' }}
+          >
+            <NavigateNextIcon />
           </IconButton>
         </Box>
+        
+        {/* Avatar on right */}
+        <IconButton size="small" sx={{ p: 0 }}>
+          <Avatar 
+            sx={{ 
+              width: 32, 
+              height: 32, 
+              bgcolor: '#f57c00',
+              fontSize: '0.875rem'
+            }}
+          >
+            A
+          </Avatar>
+        </IconButton>
       </Box>
+
+      {/* Search Box */}
+      <Collapse in={searchOpen}>
+        <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderBottom: '1px solid #e0e0e0' }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Search events, teachers, or students..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            autoFocus
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton 
+                    edge="end" 
+                    size="small" 
+                    onClick={clearSearch}
+                    aria-label="clear search"
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+              sx: { 
+                bgcolor: 'white',
+                borderRadius: 1,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#e0e0e0'
+                }
+              }
+            }}
+          />
+          {Object.keys(filteredEvents).length === 0 && searchQuery && (
+            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary', textAlign: 'center' }}>
+              No matching events found
+            </Typography>
+          )}
+        </Box>
+      </Collapse>
 
       {/* Events list grouped by date */}
       <Box sx={{ p: 2, bgcolor: 'white' }}>
-        {Object.keys(groupedEvents).map((dateKey) => (
-          <Box 
-            key={dateKey} 
-            sx={{ 
-              mb: 3,
-              display: 'flex',
-              width: '100%',
-              gap: 2
-            }}
-          >
-            {/* Date Circle on Left */}
-            <Box
-              sx={{
-                minWidth: '48px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Box
-                sx={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  bgcolor: isToday(dateKey) ? theme.palette.primary.main : 'transparent',
-                  border: isToday(dateKey) ? 'none' : '1px solid #e0e0e0',
-                  color: isToday(dateKey) ? 'white' : 'inherit'
-                }}
-              >
-                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {getDayNumber(dateKey)}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Events Column */}
-            <Box sx={{ flex: 1 }}>
-              {groupedEvents[dateKey].length === 0 ? (
+        {Object.keys(filteredEvents).length > 0 ? (
+          <Stack spacing={1.5}>
+            {Object.keys(filteredEvents).sort().map(dateKey => 
+              filteredEvents[dateKey].map((event, index) => (
                 <Paper
+                  key={`${dateKey}-${event.id || event._id || index}`}
+                  id={index === 0 ? `date-${dateKey}` : undefined} // Add ID for scrolling to first event of date
+                  onClick={() => handleEventClick(event)}
                   sx={{
                     p: 2,
-                    bgcolor: '#f5f5f5',
-                    textAlign: 'center',
+                    cursor: 'pointer',
+                    borderRadius: 1,
                     border: '1px solid #e0e0e0',
-                    borderRadius: 1
+                    '&:hover': {
+                      boxShadow: 1,
+                      bgcolor: '#fafafa'
+                    }
                   }}
                 >
-                  <Typography variant="body2" color="textSecondary">
-                    No events scheduled
-                  </Typography>
-                </Paper>
-              ) : (
-                <Stack spacing={1.5} width="100%">
-                  {groupedEvents[dateKey].map((event) => (
-                    <Paper
-                      key={event.id || event._id}
-                      onClick={() => handleEventClick(event)}
-                      sx={{
-                        p: 2,
-                        cursor: 'pointer',
-                        borderRadius: 1,
-                        border: '1px solid #e0e0e0',
-                        '&:hover': {
-                          boxShadow: 1,
-                          bgcolor: '#fafafa'
-                        }
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                        {/* Event Details on Left */}
-                        <Box sx={{ flex: 1 }}>
-                          <Typography
-                            variant="subtitle1"
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                    {/* Date Circle */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center',
+                      mt: 0.5
+                    }}>
+                      <Box sx={{ 
+                        width: 40, 
+                        height: 40, 
+                        borderRadius: '50%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        bgcolor: isToday(event.date) ? theme.palette.primary.main : '#f0f0f0',
+                        color: isToday(event.date) ? 'white' : '#333',
+                        fontWeight: 'medium',
+                        fontSize: '1.1rem',
+                        mb: 0.5
+                      }}>
+                        {new Date(event.date).getDate()}
+                      </Box>
+                      <Typography variant="caption" sx={{ color: '#666', fontSize: '0.7rem' }}>
+                        {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                      </Typography>
+                    </Box>
+                    
+                    {/* Event Details on Left */}
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 500,
+                          color: isEventEnded(event) ? '#666' : '#333',
+                          mb: 0.5,
+                          mt: '2px' // Align with time text
+                        }}
+                      >
+                        {event.title}
+                      </Typography>
+                      {event.description && (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: '#666',
+                            mb: 1
+                          }}
+                        >
+                          {event.description}
+                        </Typography>
+                      )}
+                      {event.teacherId && teachers && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar
                             sx={{
-                              fontWeight: 500,
-                              color: isEventEnded(event) ? '#666' : '#333',
-                              mb: 0.5,
-                              mt: '2px' // Align with time text
-                            }}
-                          >
-                            {event.title}
-                          </Typography>
-                          {event.description && (
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                color: '#666',
-                                mb: 1
-                              }}
-                            >
-                              {event.description}
-                            </Typography>
-                          )}
-                          {event.teacherId && teachers && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Avatar
-                                sx={{
-                                  width: 24,
-                                  height: 24,
-                                  bgcolor: getEventColor(event),
-                                  fontSize: '0.75rem'
-                                }}
-                              >
-                                {getTeacherForEvent(event)?.name?.[0] || 'T'}
-                              </Avatar>
-                              <Typography variant="caption" color="textSecondary">
-                                {getTeacherForEvent(event)?.name || 'Unknown Teacher'}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-
-                        {/* Time and Status on Right */}
-                        <Box sx={{ 
-                          minWidth: '100px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-end',
-                          mt: 0.5 // Add top margin to align with title
-                        }}>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: '#666',
-                              display: 'block',
-                              fontSize: '0.75rem',
-                              mb: 1
-                            }}
-                          >
-                            {formatTime(event.startTime)}
-                            {event.endTime && ` - ${formatTime(event.endTime)}`}
-                          </Typography>
-                          <Box
-                            sx={{
-                              px: 1,
-                              py: 0.25,
-                              borderRadius: '4px',
-                              display: 'inline-block',
-                              bgcolor: isEventEnded(event) ? '#f5f5f5' : 
-                                      isEventActive(event) ? '#e8f5e9' : '#e3f2fd',
-                              color: isEventEnded(event) ? '#666' : 
-                                     isEventActive(event) ? '#2e7d32' : '#1976d2',
+                              width: 24,
+                              height: 24,
+                              bgcolor: getEventColor(event),
                               fontSize: '0.75rem'
                             }}
                           >
-                            {isEventEnded(event) ? 'Ended' : 
-                             isEventActive(event) ? 'Active' : 'Upcoming'}
-                          </Box>
+                            {getTeacherForEvent(event)?.name?.[0] || 'T'}
+                          </Avatar>
+                          <Typography variant="caption" color="textSecondary">
+                            {getTeacherForEvent(event)?.name || 'Unknown Teacher'}
+                          </Typography>
                         </Box>
+                      )}
+                    </Box>
+
+                    {/* Time and Status on Right */}
+                    <Box sx={{ 
+                      minWidth: '100px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
+                      mt: 0.5 // Add top margin to align with title
+                    }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: '#666',
+                          display: 'block',
+                          fontSize: '0.75rem',
+                          mb: 1
+                        }}
+                      >
+                        {formatTime(event.startTime)}
+                        {event.endTime && ` - ${formatTime(event.endTime)}`}
+                      </Typography>
+                      <Box
+                        sx={{
+                          px: 1,
+                          py: 0.25,
+                          borderRadius: '4px',
+                          display: 'inline-block',
+                          bgcolor: isEventEnded(event) ? '#f5f5f5' : 
+                                      isEventActive(event) ? '#e8f5e9' : '#e3f2fd',
+                          color: isEventEnded(event) ? '#666' : 
+                                 isEventActive(event) ? '#2e7d32' : '#1976d2',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        {isEventEnded(event) ? 'Ended' : 
+                         isEventActive(event) ? 'Active' : 'Upcoming'}
                       </Box>
-                    </Paper>
-                  ))}
-                </Stack>
-              )}
-            </Box>
+                    </Box>
+                  </Box>
+                </Paper>
+              ))
+            )}
+          </Stack>
+        ) : (
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            height: 200,
+            color: 'text.secondary'
+          }}>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              {searchQuery ? 'No matching events found' : 'No events scheduled'}
+            </Typography>
+            {!searchQuery && (
+              <Typography variant="body2">
+                Select a different date or add new events
+              </Typography>
+            )}
           </Box>
-        ))}
+        )}
       </Box>
 
       {/* Simple Calendar Drawer */}

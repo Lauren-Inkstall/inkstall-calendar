@@ -107,8 +107,16 @@ const Week = ({ currentDate, events = [], onAddEvent, onEventClick }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Week Header */}
-      <Box sx={{ display: 'flex', borderBottom: '1px solid #e0e0e0' }}>
+      {/* Week Header - now with sticky positioning */}
+      <Box sx={{ 
+        display: 'flex', 
+        borderBottom: '1px solid #e0e0e0',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        backgroundColor: 'white',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}>
         {/* Time column header */}
         <Box sx={{ width: '60px', flexShrink: 0 }}></Box>
         
