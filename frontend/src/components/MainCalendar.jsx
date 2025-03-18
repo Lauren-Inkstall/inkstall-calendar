@@ -349,7 +349,9 @@ const MainCalendar = () => {
             onViewChange={handleViewChange}
             teachers={teachers}
             userRole={userRole}
+            currentUserId={currentUserId}
             isIPhoneSE={isIPhoneSE}
+            isMobile={isMobile}
           />
         </Box>
       </Box>

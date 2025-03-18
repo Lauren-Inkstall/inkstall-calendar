@@ -769,11 +769,11 @@ const CalanderRight = ({
                             hour < 23 ? '1px solid #e0e0e0' : 'none',
                           minHeight: isIPhoneSE ? '50px' : '60px',
                           position: 'relative',
-                          cursor: 'pointer', // Always use pointer cursor
+                          cursor: userRole !== 'teacher' ? 'pointer' : 'default', // Only show pointer cursor for non-teachers
                           '&:hover': {
                             backgroundColor: onLeave
                               ? 'rgba(0, 0, 0, 0.02)'
-                              : 'rgba(0, 0, 0, 0.04)',
+                              : userRole !== 'teacher' ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
                           },
                           backgroundColor: onLeave
                             ? 'rgba(244, 67, 54, 0.03)'
@@ -786,10 +786,8 @@ const CalanderRight = ({
                           }),
                         }}
                         onClick={() => {
-                          // Only allow non-teachers to create events
-                          if (userRole !== 'teacher') {
-                            handleOpenEventForm(hour, teacher.id);
-                          }
+                          // Always allow creating events, even if teacher is on leave
+                          handleOpenEventForm(hour, teacher.id);
                         }}
                       >
                         {/* Display events in this cell */}
