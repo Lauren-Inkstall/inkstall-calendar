@@ -21,7 +21,7 @@ import TaskDetailsModal from './TaskDetailsModal';
 import SearchIcon from '@mui/icons-material/Search';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import MobileAgendaView from './MobileAgendaView';
-
+import PropTypes from 'prop-types';
 
 const CalanderRight = ({
   events = [],
@@ -35,6 +35,7 @@ const CalanderRight = ({
   isIPhoneSE = false,
   isMobile = false,
   userRole = 'admin',
+  currentUserId = '',
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -46,9 +47,38 @@ const CalanderRight = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [clickedWhatsAppEvents, setClickedWhatsAppEvents] = useState({}); // Add state to track clicked WhatsApp icons
   const [sentEvents, setSentEvents] = useState({}); // Add state to track events marked as sent
+  const [userEmail, setUserEmail] = useState('');
 
   // Add state for teacher leave data
   const [teacherLeaveData, setTeacherLeaveData] = useState([]);
+
+  // Get user email from localStorage on component mount
+  useEffect(() => {
+    const email = localStorage.getItem('userEmail');
+    if (email) {
+      setUserEmail(email);
+      console.log('CalanderRight - User email from localStorage:', email);
+    }
+    
+    // Debug: Log all localStorage items
+    console.log('CalanderRight - localStorage items:', {
+      userRole: localStorage.getItem('userRole'),
+      userEmail: localStorage.getItem('userEmail'),
+      userName: localStorage.getItem('userName'),
+      user: localStorage.getItem('user')
+    });
+  }, []);
+
+  // Debug: Log events, teachers, and user info
+  useEffect(() => {
+    if (events.length > 0 && teachers.length > 0) {
+      console.log('CalanderRight - Events:', events);
+      console.log('CalanderRight - Teachers:', teachers);
+      console.log('CalanderRight - User role:', userRole);
+      console.log('CalanderRight - User ID:', currentUserId);
+      console.log('CalanderRight - User email:', userEmail);
+    }
+  }, [events, teachers, userRole, currentUserId, userEmail]);
 
   // Static test data for teacher leaves
   useEffect(() => {
@@ -214,6 +244,79 @@ const CalanderRight = ({
     );
   };
 
+  // Check if event belongs to the current user (for teacher role)
+  const isCurrentUserEvent = (event) => {
+    if (!event || userRole !== 'teacher') return true;
+    
+    // Debug: Log event and user data for comparison
+    console.log('Checking if event belongs to current user:', {
+      event,
+      eventTeacherId: event.teacherId || (typeof event.teacher === 'string' ? event.teacher : (event.teacher?.id || '')),
+      eventTeacherName: typeof event.teacher === 'string' ? event.teacher : (event.teacher?.name || ''),
+      eventTeacherEmail: event.teacherEmail || (event.teacher?.email || ''),
+      currentUserId,
+      userEmail,
+      userName
+    });
+    
+    // Try to match by ID first (most reliable)
+    if (currentUserId) {
+      const eventTeacherId = event.teacherId || (typeof event.teacher === 'object' ? event.teacher?.id : '');
+      if (eventTeacherId === currentUserId) {
+        console.log('✅ Event matched by teacher ID:', event);
+        return true;
+      }
+    }
+    
+    // For Test0001 case, exact username match
+    if (userName) {
+      const eventTeacherName = typeof event.teacher === 'string' 
+        ? event.teacher 
+        : (typeof event.teacher === 'object' ? event.teacher?.name : '');
+      
+      if (eventTeacherName && eventTeacherName.toLowerCase() === userName.toLowerCase()) {
+        console.log('✅ Event matched by exact teacher name:', event);
+        return true;
+      }
+    }
+    
+    // Try to match by exact email
+    if (userEmail) {
+      const eventTeacherEmail = event.teacherEmail || (typeof event.teacher === 'object' ? event.teacher?.email : '');
+      if (eventTeacherEmail && eventTeacherEmail.toLowerCase() === userEmail.toLowerCase()) {
+        console.log('✅ Event matched by exact teacher email:', event);
+        return true;
+      }
+    }
+    
+    // As a last resort, check for username in teacher name or vice versa
+    // But only if the match is very specific (to avoid false positives)
+    if (userName) {
+      const eventTeacherName = typeof event.teacher === 'string' 
+        ? event.teacher 
+        : (typeof event.teacher === 'object' ? event.teacher?.name : '');
+      
+      if (eventTeacherName) {
+        // Only consider this a match if one is fully contained in the other
+        // and they share at least 5 characters (to avoid matching short names like "test")
+        const userNameLower = userName.toLowerCase();
+        const teacherNameLower = eventTeacherName.toLowerCase();
+        
+        // Check if one contains the other completely
+        const nameContainedInTeacher = teacherNameLower.includes(userNameLower) && userNameLower.length >= 5;
+        const teacherContainedInName = userNameLower.includes(teacherNameLower) && teacherNameLower.length >= 5;
+        
+        if (nameContainedInTeacher || teacherContainedInName) {
+          console.log('✅ Event matched by name inclusion:', event);
+          return true;
+        }
+      }
+    }
+    
+    console.log('❌ Event did not match current user:', event);
+    return false;
+  };
+
   // Get event color based on its timing
   const getEventColor = (event) => {
     // Check if event has ended (past event)
@@ -233,9 +336,10 @@ const CalanderRight = ({
     return event.color || '#1a73e8';
   };
 
-  // Filter events for the current month - modified to show all events
+  // Filter events for the current month - modified to show only teacher's events if user is a teacher
   const getMonthEvents = () => {
-    return events.filter((event) => {
+    // First filter by month
+    const monthEvents = events.filter((event) => {
       try {
         const eventDate = normalizeDate(event.date);
         return (
@@ -247,6 +351,13 @@ const CalanderRight = ({
         return false;
       }
     });
+
+    // Then filter by user role if needed
+    if (userRole === 'teacher') {
+      return monthEvents.filter(isCurrentUserEvent);
+    }
+
+    return monthEvents;
   };
 
   // Filter events for the current week
@@ -259,17 +370,26 @@ const CalanderRight = ({
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    return events.filter((event) => {
+    // First filter by week
+    const weekEvents = events.filter((event) => {
       const eventDate = normalizeDate(event.date);
       if (!eventDate) return false;
 
       return eventDate >= weekStart && eventDate <= weekEnd;
     });
+
+    // Then filter by user role if needed
+    if (userRole === 'teacher') {
+      return weekEvents.filter(isCurrentUserEvent);
+    }
+
+    return weekEvents;
   };
 
-  // Filter events for the current day - modified to show all events
+  // Filter events for the current day - modified to show only teacher's events if user is a teacher
   const getDayEvents = () => {
-    return events.filter((event) => {
+    // First filter by day
+    const dayEvents = events.filter((event) => {
       try {
         const eventDate = normalizeDate(event.date);
         return isSameDay(eventDate, currentDate);
@@ -278,6 +398,13 @@ const CalanderRight = ({
         return false;
       }
     });
+
+    // Then filter by user role if needed
+    if (userRole === 'teacher') {
+      return dayEvents.filter(isCurrentUserEvent);
+    }
+
+    return dayEvents;
   };
 
   // Handle opening the event form
@@ -669,7 +796,7 @@ const CalanderRight = ({
                     sx={{
                       fontWeight: 'bold',
                       color: 'text.primary',
-                      fontSize: isIPhoneSE ? '0.7rem' : '0.8rem',
+                      fontSize: isIPhoneSE ? '0.7rem' : '0.8rem'
                     }}
                     noWrap
                   >
@@ -1254,6 +1381,39 @@ const CalanderRight = ({
       )}
     </Box>
   );
+};
+
+// PropTypes for type checking
+CalanderRight.propTypes = {
+  events: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      title: PropTypes.string,
+      date: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+      startTime: PropTypes.string,
+      endTime: PropTypes.string,
+      teacherId: PropTypes.string,
+      color: PropTypes.string,
+    })
+  ),
+  selectedDate: PropTypes.instanceOf(Date),
+  onAddEvent: PropTypes.func,
+  onUpdateEvent: PropTypes.func,
+  onDeleteEvent: PropTypes.func,
+  teachers: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      name: PropTypes.string,
+      checked: PropTypes.bool,
+      color: PropTypes.string,
+    })
+  ),
+  viewMode: PropTypes.string,
+  onViewChange: PropTypes.func,
+  isIPhoneSE: PropTypes.bool,
+  isMobile: PropTypes.bool,
+  userRole: PropTypes.string, // User role prop type
+  currentUserId: PropTypes.string, // Current user ID prop type
 };
 
 export default CalanderRight;

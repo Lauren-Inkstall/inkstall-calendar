@@ -33,16 +33,108 @@ const CalanderLeft = ({
   teachers,
   onToggleTeacher,
   userRole, // Add userRole to the props
+  currentUserId, // Add currentUserId to the props
+  currentUserName, // Add currentUserName to the props
 }) => {
   const [openEventForm, setOpenEventForm] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [userEmail, setUserEmail] = React.useState('');
+
+  // Get user email from localStorage on component mount
+  React.useEffect(() => {
+    const email = localStorage.getItem('userEmail');
+    if (email) {
+      setUserEmail(email);
+      console.log('CalanderLeft - User email from localStorage:', email);
+    }
+    
+    // Debug: Log all localStorage items
+    console.log('CalanderLeft - localStorage items:', {
+      userRole: localStorage.getItem('userRole'),
+      userEmail: localStorage.getItem('userEmail'),
+      userName: localStorage.getItem('userName'),
+      user: localStorage.getItem('user')
+    });
+  }, []);
 
   // Check if user is admin or superadmin (not teacher)
   const canCreateEvents = userRole === 'admin' || userRole === 'superadmin';
 
-  const filteredTeachers = teachers.filter((teacher) =>
-    teacher.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Debug: Log teachers and user info
+  React.useEffect(() => {
+    if (teachers.length > 0) {
+      console.log('CalanderLeft - Available teachers:', teachers);
+      console.log('CalanderLeft - User role:', userRole);
+      console.log('CalanderLeft - User ID:', currentUserId);
+      console.log('CalanderLeft - User email:', userEmail);
+      console.log('CalanderLeft - User name:', currentUserName);
+    }
+  }, [teachers, userRole, currentUserId, userEmail, currentUserName]);
+
+  // Filter teachers based on user role and email/ID
+  const displayedTeachers = userRole === 'teacher'
+    ? teachers.filter(teacher => {
+        // Debug: Log all teacher and user data for comparison
+        console.log('Comparing teacher to current user:', {
+          teacher,
+          teacherId: teacher.id,
+          teacherName: teacher.name,
+          teacherEmail: teacher.email,
+          currentUserId,
+          userEmail,
+          currentUserName,
+          userNameLower: currentUserName ? currentUserName.toLowerCase() : '',
+          teacherNameLower: teacher.name ? teacher.name.toLowerCase() : ''
+        });
+        
+        // Try to match by ID first (most reliable)
+        if (currentUserId && teacher.id === currentUserId) {
+          console.log('✅ Teacher matched by ID:', teacher);
+          return true;
+        }
+        
+        // For Test0001 case, exact username match
+        if (currentUserName && teacher.name) {
+          const exactNameMatch = teacher.name.toLowerCase() === currentUserName.toLowerCase();
+          if (exactNameMatch) {
+            console.log('✅ Teacher matched by exact name:', teacher);
+            return true;
+          }
+        }
+        
+        // Try to match by exact email
+        if (userEmail && teacher.email) {
+          const exactEmailMatch = teacher.email.toLowerCase() === userEmail.toLowerCase();
+          if (exactEmailMatch) {
+            console.log('✅ Teacher matched by exact email:', teacher);
+            return true;
+          }
+        }
+        
+        // As a last resort, check for username in teacher name or vice versa
+        // But only if the match is very specific (to avoid false positives)
+        if (currentUserName && teacher.name) {
+          // Only consider this a match if one is fully contained in the other
+          // and they share at least 5 characters (to avoid matching short names like "test")
+          const userNameLower = currentUserName.toLowerCase();
+          const teacherNameLower = teacher.name.toLowerCase();
+          
+          // Check if one contains the other completely
+          const nameContainedInTeacher = teacherNameLower.includes(userNameLower) && userNameLower.length >= 5;
+          const teacherContainedInName = userNameLower.includes(teacherNameLower) && teacherNameLower.length >= 5;
+          
+          if (nameContainedInTeacher || teacherContainedInName) {
+            console.log('✅ Teacher matched by name inclusion:', teacher);
+            return true;
+          }
+        }
+        
+        console.log('❌ Teacher did not match current user:', teacher);
+        return false;
+      })
+    : teachers.filter((teacher) =>
+        teacher.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
 
   const handleToggle = (id) => {
     if (onToggleTeacher) {
@@ -142,7 +234,7 @@ const CalanderLeft = ({
           disablePadding
           sx={{ overflowY: 'auto', maxHeight: 'calc(100vh - 350px)' }}
         >
-          {filteredTeachers.map((teacher) => (
+          {displayedTeachers.map((teacher) => (
             <ListItem
               key={teacher.id}
               dense
@@ -225,6 +317,8 @@ CalanderLeft.propTypes = {
   ).isRequired,
   onToggleTeacher: PropTypes.func,
   userRole: PropTypes.string.isRequired, // Add userRole prop type
+  currentUserId: PropTypes.string, // Add currentUserId prop type
+  currentUserName: PropTypes.string.isRequired, // Add currentUserName prop type
 };
 
 export default CalanderLeft;

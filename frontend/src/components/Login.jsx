@@ -45,6 +45,9 @@ export default function LoginForm() {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userEmail', formData.email);
         
+        // Store the complete user object in localStorage
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
         // Store profile photo URLs in localStorage with detailed logging
         const profilePhotoUrl = response.data.user.profilePhotoUrl || '';
         const localPhotoUrl = response.data.user.localPhotoUrl || '';

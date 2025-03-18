@@ -21,6 +21,7 @@ const MainCalendar = () => {
   const [viewMode, setViewMode] = useState('Day'); 
   const [userRole, setUserRole] = useState(''); 
   const [currentUserId, setCurrentUserId] = useState(''); 
+  const [currentUserName, setCurrentUserName] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
@@ -51,6 +52,21 @@ const MainCalendar = () => {
           setUserRole('teacher');
         }
       }
+      
+      // Get user name from localStorage
+      const userName = localStorage.getItem('userName');
+      if (userName) {
+        setCurrentUserName(userName);
+        console.log('MainCalendar - User name from localStorage:', userName);
+      }
+      
+      // Debug: Log all user info from localStorage
+      console.log('MainCalendar - User info from localStorage:', {
+        userRole: localStorage.getItem('userRole'),
+        userEmail: localStorage.getItem('userEmail'),
+        userName: localStorage.getItem('userName'),
+        user: localStorage.getItem('user')
+      });
     } catch (error) {
       console.error('Error getting user role:', error);
       // Default to teacher if there's an error
@@ -192,6 +208,7 @@ const MainCalendar = () => {
       const formattedTeachers = contextTeachers.map((teacher, index) => ({
         id: teacher._id,
         name: teacher.teacherName,
+        email: teacher.email || teacher.teacherEmail || '',
         checked: true,
         color: defaultColors[index % defaultColors.length]
       }));
@@ -328,6 +345,7 @@ const MainCalendar = () => {
               onToggleTeacher={handleToggleTeacher}
               userRole={userRole}
               currentUserId={currentUserId}
+              currentUserName={currentUserName}
               isMobile={isMobile}
             />
           </Box>
@@ -350,6 +368,7 @@ const MainCalendar = () => {
             teachers={teachers}
             userRole={userRole}
             currentUserId={currentUserId}
+            currentUserName={currentUserName}
             isIPhoneSE={isIPhoneSE}
             isMobile={isMobile}
           />
