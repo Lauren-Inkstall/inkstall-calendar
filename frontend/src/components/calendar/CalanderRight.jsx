@@ -116,6 +116,32 @@ const CalanderRight = ({
     return () => clearInterval(timer);
   }, []);
 
+  // Add a ref for the day view container to enable scrolling
+  const dayViewRef = React.useRef(null);
+
+  // Auto-scroll to center the current time when in Day view
+  useEffect(() => {
+    if (viewMode === 'Day' && dayViewRef.current) {
+      const currentHour = currentTime.getHours();
+      const currentMinute = currentTime.getMinutes();
+      
+      // Calculate position: 80px header + 60px per hour
+      const timePosition = ((currentHour + currentMinute / 60) * 60) + 80;
+      
+      // Get the container's height
+      const containerHeight = dayViewRef.current.clientHeight;
+      
+      // Calculate scroll position to center the current time
+      const scrollPosition = timePosition - (containerHeight / 2);
+      
+      // Scroll to the calculated position with smooth animation
+      dayViewRef.current.scrollTo({
+        top: Math.max(0, scrollPosition),
+        behavior: 'smooth'
+      });
+    }
+  }, [viewMode, currentTime]);
+
   // Format date to display month and year
   const formatMonthYear = (date) => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -642,6 +668,7 @@ const CalanderRight = ({
 
     return (
       <Box
+        ref={dayViewRef}
         sx={{
           width: '100%',
           height: '100%',
