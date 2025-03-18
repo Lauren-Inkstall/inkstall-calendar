@@ -3,13 +3,16 @@ import {
   Box,
   Typography,
   Paper,
-  IconButton,
   Avatar,
   Divider,
   useTheme,
   InputBase,
   Drawer,
   Button,
+  Stack,
+  Select,
+  MenuItem,
+  IconButton
 } from '@mui/material';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -17,6 +20,7 @@ import TodayIcon from '@mui/icons-material/Today';
 import SearchIcon from '@mui/icons-material/Search';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CloseIcon from '@mui/icons-material/Close';
+import TaskDetailsMobile from './TaskDetailsMobile';
 
 const MobileAgendaView = ({
   events = [],
@@ -30,6 +34,9 @@ const MobileAgendaView = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [groupedEvents, setGroupedEvents] = useState({});
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [viewType, setViewType] = useState('agenda');
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const theme = useTheme();
 
   // Update current date when selectedDate changes
@@ -96,6 +103,11 @@ const MobileAgendaView = ({
     
     setGroupedEvents(grouped);
   }, [events, currentDate, userRole, currentTeacherId]);
+
+  // Handle view type change
+  const handleViewChange = (event) => {
+    setViewType(event.target.value);
+  };
 
   // Navigate to previous week
   const handlePreviousWeek = () => {
@@ -236,127 +248,71 @@ const MobileAgendaView = ({
     return dates;
   };
 
-  // Render a single event
-  const renderEvent = (event) => {
-    // Get teacher data if available
-    const teacher = teachers.find((t) => t.id === event.teacherId || t.id === event.teacher);
-    
-    // Get event color (use teacher color if available, otherwise use event color or default)
-    const eventColor = teacher ? teacher.color : (event.color || '#4285F4');
-    
-    // Format time for display
-    const formatTime = (timeString) => {
-      if (!timeString) return '';
-      
-      try {
-        const [hours, minutes] = timeString.split(':');
-        const hour = parseInt(hours, 10);
-        const minute = parseInt(minutes, 10);
-        
-        if (isNaN(hour) || isNaN(minute)) return timeString;
-        
-        // Convert to 12-hour format
-        const period = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
-      } catch (error) {
-        console.error('Error formatting time:', error);
-        return timeString;
-      }
-    };
-    
-    // Format start and end times
-    const startTime = formatTime(event.startTime);
-    const endTime = event.endTime ? formatTime(event.endTime) : '';
-    const timeDisplay = endTime ? `${startTime} - ${endTime}` : startTime;
-    
-    // Get teacher name (use display name if available, otherwise use ID)
-    const teacherName = teacher ? teacher.name : (event.teacherName || 'Unknown Teacher');
-    
-    return (
-      <Paper
-        key={event.id || event._id}
-        onClick={() => onEventClick && onEventClick(event)}
-        sx={{
-          mb: 1.5,
-          p: 1.5,
-          borderRadius: 2,
-          bgcolor: eventColor,
-          color: isEventEnded(event) ? '#757575' : '#000',
-          cursor: 'pointer',
-          '&:hover': {
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            filter: 'brightness(0.95)',
-          }
-        }}
-      >
-        <Typography variant="subtitle1" sx={{ 
-          fontWeight: 'bold',
-          color: isEventEnded(event) ? '#757575' : '#000'
-        }}>
-          {event.title}
-        </Typography>
-        
-        <Typography variant="body2" sx={{ 
-          mt: 0.5,
-          color: isEventEnded(event) ? '#757575' : '#000'
-        }}>
-          {event.startTime && event.endTime ? 
-            `${formatTime(event.startTime)}–${formatTime(event.endTime)}` : 
-            'Time not specified'}
-        </Typography>
-        
-        {event.description && (
-          <Typography variant="body2" sx={{ 
-            mt: 0.5,
-            color: isEventEnded(event) ? '#757575' : '#000',
-            opacity: 0.9
-          }}>
-            {event.description}
-          </Typography>
-        )}
-      </Paper>
-    );
+  // Handle event click
+  const handleEventClick = (event) => {
+    console.log('Event clicked:', event);
+    setSelectedEvent(event);
+    setDetailsOpen(true);
+    // Don't call the external onEventClick to prevent double modals
+    // if (onEventClick) {
+    //   onEventClick(event);
+    // }
+  };
+
+  // Close event details modal
+  const handleCloseDetails = () => {
+    setDetailsOpen(false);
   };
 
   return (
     <Box sx={{ height: '100%', overflow: 'auto', bgcolor: 'white', color: '#333' }}>
-      {/* Header with month, search and avatar */}
+      {/* Header with view selector and avatar */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        p: 1,
+        p: 2,
         borderBottom: '1px solid #e0e0e0',
         bgcolor: '#f5f5f5'
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Box 
-            onClick={toggleCalendar}
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              cursor: 'pointer',
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* View Type Dropdown */}
+          <Select
+            value={viewType}
+            onChange={handleViewChange}
+            size="small"
+            sx={{
+              minWidth: 120,
+              '& .MuiSelect-select': {
+                py: 1,
+                bgcolor: 'white'
+              }
             }}
           >
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
-                color: '#555', 
-                fontWeight: 'medium',
-              }}
-            >
-              {currentDate.toLocaleDateString('en-US', { month: 'long' })}
-            </Typography>
-            <KeyboardArrowDownIcon 
-              fontSize="small" 
-              sx={{ color: '#555', ml: '2px' }} 
-            />
-          </Box>
+            <MenuItem value="day">Day</MenuItem>
+            <MenuItem value="week">Week</MenuItem>
+            <MenuItem value="month">Month</MenuItem>
+            <MenuItem value="agenda">Agenda</MenuItem>
+          </Select>
+
+          {/* Current Date Display */}
+          <Typography 
+            variant="subtitle1" 
+            sx={{ 
+              color: '#555', 
+              fontWeight: 'medium' 
+            }}
+          >
+            {currentDate.toLocaleDateString('en-US', { 
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric'
+            })}
+          </Typography>
         </Box>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <IconButton size="small" sx={{ color: '#555', mr: 1 }}>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton size="small" sx={{ color: '#555' }}>
             <SearchIcon />
           </IconButton>
           
@@ -375,93 +331,167 @@ const MobileAgendaView = ({
         </Box>
       </Box>
 
-      {/* Date navigation */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        p: 2,
-        borderBottom: '1px solid #e0e0e0',
-        bgcolor: 'white'
-      }}>
-        <IconButton onClick={handlePreviousWeek} sx={{ color: '#555' }}>
-          <NavigateBeforeIcon />
-        </IconButton>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              fontWeight: 'medium',
-              color: '#333'
-            }}
-          >
-            {currentDate.toLocaleDateString('en-US', { 
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
-            })}
-          </Typography>
-          
-          <IconButton onClick={handleToday} sx={{ ml: 1, color: '#555' }}>
-            <TodayIcon fontSize="small" />
-          </IconButton>
-        </Box>
-        
-        <IconButton onClick={handleNextWeek} sx={{ color: '#555' }}>
-          <NavigateNextIcon />
-        </IconButton>
-      </Box>
-
       {/* Events list grouped by date */}
       <Box sx={{ p: 2, bgcolor: 'white' }}>
         {Object.keys(groupedEvents).map((dateKey) => (
-          <Box key={dateKey} sx={{ mb: 3, bgcolor: 'white' }}>
-            {/* Date header */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              mb: 1,
-              bgcolor: 'white'
-            }}>
-              <Box sx={{ 
+          <Box 
+            key={dateKey} 
+            sx={{ 
+              mb: 3,
+              display: 'flex',
+              width: '100%',
+              gap: 2
+            }}
+          >
+            {/* Date Circle on Left */}
+            <Box
+              sx={{
+                minWidth: '48px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                mr: 2,
-                bgcolor: 'white'
-              }}>
-                <Typography variant="caption" sx={{ color: '#333', fontWeight: 'bold' }}>
-                  {formatDate(dateKey).split(' ')[0]}
+                justifyContent: 'center'
+              }}
+            >
+              <Box
+                sx={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: isToday(dateKey) ? theme.palette.primary.main : 'transparent',
+                  border: isToday(dateKey) ? 'none' : '1px solid #e0e0e0',
+                  color: isToday(dateKey) ? 'white' : 'inherit'
+                }}
+              >
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {getDayNumber(dateKey)}
                 </Typography>
-                
-                <Avatar 
-                  sx={{ 
-                    bgcolor: isToday(dateKey) ? '#1a73e8' : 'transparent',
-                    color: isToday(dateKey) ? 'white' : '#333',
-                    width: 36, 
-                    height: 36,
-                    border: isToday(dateKey) ? 'none' : '1px solid #999',
-                    fontWeight: 'bold'
+              </Box>
+            </Box>
+
+            {/* Events Column */}
+            <Box sx={{ flex: 1 }}>
+              {groupedEvents[dateKey].length === 0 ? (
+                <Paper
+                  sx={{
+                    p: 2,
+                    bgcolor: '#f5f5f5',
+                    textAlign: 'center',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: 1
                   }}
                 >
-                  {getDayNumber(dateKey)}
-                </Avatar>
-              </Box>
-              
-              <Divider orientation="vertical" flexItem sx={{ mx: 1, bgcolor: '#999' }} />
-              
-              {groupedEvents[dateKey].length === 0 ? (
-                <Typography variant="body2" sx={{ color: '#333', ml: 2, fontWeight: 'medium' }}>
-                  No events scheduled
-                </Typography>
-              ) : null}
+                  <Typography variant="body2" color="textSecondary">
+                    No events scheduled
+                  </Typography>
+                </Paper>
+              ) : (
+                <Stack spacing={1.5} width="100%">
+                  {groupedEvents[dateKey].map((event) => (
+                    <Paper
+                      key={event.id || event._id}
+                      onClick={() => handleEventClick(event)}
+                      sx={{
+                        p: 2,
+                        cursor: 'pointer',
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0',
+                        '&:hover': {
+                          boxShadow: 1,
+                          bgcolor: '#fafafa'
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        {/* Event Details on Left */}
+                        <Box sx={{ flex: 1 }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              fontWeight: 500,
+                              color: isEventEnded(event) ? '#666' : '#333',
+                              mb: 0.5,
+                              mt: '2px' // Align with time text
+                            }}
+                          >
+                            {event.title}
+                          </Typography>
+                          {event.description && (
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: '#666',
+                                mb: 1
+                              }}
+                            >
+                              {event.description}
+                            </Typography>
+                          )}
+                          {event.teacherId && teachers && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  bgcolor: getEventColor(event),
+                                  fontSize: '0.75rem'
+                                }}
+                              >
+                                {getTeacherForEvent(event)?.name?.[0] || 'T'}
+                              </Avatar>
+                              <Typography variant="caption" color="textSecondary">
+                                {getTeacherForEvent(event)?.name || 'Unknown Teacher'}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+
+                        {/* Time and Status on Right */}
+                        <Box sx={{ 
+                          minWidth: '100px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                          mt: 0.5 // Add top margin to align with title
+                        }}>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: '#666',
+                              display: 'block',
+                              fontSize: '0.75rem',
+                              mb: 1
+                            }}
+                          >
+                            {formatTime(event.startTime)}
+                            {event.endTime && ` - ${formatTime(event.endTime)}`}
+                          </Typography>
+                          <Box
+                            sx={{
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: '4px',
+                              display: 'inline-block',
+                              bgcolor: isEventEnded(event) ? '#f5f5f5' : 
+                                      isEventActive(event) ? '#e8f5e9' : '#e3f2fd',
+                              color: isEventEnded(event) ? '#666' : 
+                                     isEventActive(event) ? '#2e7d32' : '#1976d2',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            {isEventEnded(event) ? 'Ended' : 
+                             isEventActive(event) ? 'Active' : 'Upcoming'}
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
             </Box>
-            
-            {/* Events for this date */}
-            {groupedEvents[dateKey].map((event, index) => (
-              renderEvent(event)
-            ))}
           </Box>
         ))}
       </Box>
@@ -577,6 +607,13 @@ const MobileAgendaView = ({
           </Box>
         </Box>
       </Drawer>
+
+      {/* Event details modal */}
+      <TaskDetailsMobile 
+        open={detailsOpen} 
+        onClose={handleCloseDetails} 
+        event={selectedEvent} 
+      />
     </Box>
   );
 };
