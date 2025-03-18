@@ -75,7 +75,7 @@ const MainCalendar = () => {
   }, []);
 
   const isMobile = useMediaQuery('(max-width:768px)');
-  const isIPhoneSE = useMediaQuery('(max-width:375px)'); 
+  const isIPhoneSE = useMediaQuery('(max-width:768px)'); 
   
   // Fetch events from the database
   useEffect(() => {

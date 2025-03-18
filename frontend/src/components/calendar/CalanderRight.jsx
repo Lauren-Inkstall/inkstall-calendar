@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -119,28 +119,69 @@ const CalanderRight = ({
   // Add a ref for the day view container to enable scrolling
   const dayViewRef = React.useRef(null);
 
+  // Function to scroll to current time
+  const scrollToCurrentTime = useCallback(() => {
+    if (viewMode === 'Day' && dayViewRef.current) {
+      // Add a small delay to ensure the DOM is fully rendered
+      setTimeout(() => {
+        const currentHour = currentTime.getHours();
+        const currentMinute = currentTime.getMinutes();
+        
+        // Calculate position: 80px header + 60px per hour
+        const timePosition = ((currentHour + currentMinute / 60) * 60) + 80;
+        
+        // Get the container's height
+        const containerHeight = dayViewRef.current.clientHeight;
+        
+        // Calculate scroll position to center the current time
+        const scrollPosition = timePosition - (containerHeight / 2);
+        
+        // Scroll to the calculated position with smooth animation
+        dayViewRef.current.scrollTo({
+          top: Math.max(0, scrollPosition),
+          behavior: 'smooth'
+        });
+        
+        console.log('Auto-scrolled to center current time:', {
+          currentHour,
+          currentMinute,
+          timePosition,
+          containerHeight,
+          scrollPosition
+        });
+      }, 100);
+    }
+  }, [viewMode, currentTime, dayViewRef]);
+
   // Auto-scroll to center the current time when in Day view
   useEffect(() => {
-    if (viewMode === 'Day' && dayViewRef.current) {
-      const currentHour = currentTime.getHours();
-      const currentMinute = currentTime.getMinutes();
-      
-      // Calculate position: 80px header + 60px per hour
-      const timePosition = ((currentHour + currentMinute / 60) * 60) + 80;
-      
-      // Get the container's height
-      const containerHeight = dayViewRef.current.clientHeight;
-      
-      // Calculate scroll position to center the current time
-      const scrollPosition = timePosition - (containerHeight / 2);
-      
-      // Scroll to the calculated position with smooth animation
-      dayViewRef.current.scrollTo({
-        top: Math.max(0, scrollPosition),
-        behavior: 'smooth'
-      });
+    scrollToCurrentTime();
+  }, [scrollToCurrentTime]);
+
+  // Also scroll to center the current time when the date changes
+  useEffect(() => {
+    if (viewMode === 'Day') {
+      // Small delay to ensure the view has updated for the new date
+      setTimeout(() => {
+        scrollToCurrentTime();
+      }, 100);
     }
-  }, [viewMode, currentTime]);
+  }, [currentDate, viewMode, scrollToCurrentTime]);
+
+  // Handle window resize to maintain centered current time
+  useEffect(() => {
+    const handleResize = () => {
+      if (viewMode === 'Day') {
+        scrollToCurrentTime();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [viewMode, scrollToCurrentTime]);
 
   // Format date to display month and year
   const formatMonthYear = (date) => {
@@ -707,7 +748,7 @@ const CalanderRight = ({
               zIndex: 2,
               display: 'flex',
               alignItems: 'center',
-              transition: 'top 0.3s linear',
+              transition: 'all 0.3s ease-in-out',
               width: isIPhoneSE ? 'calc(100% - 2px)' : '100%', // Adjust width for iPhone SE border
               '&::before': {
                 content: '""',
@@ -720,6 +761,7 @@ const CalanderRight = ({
                 borderRadius: '50%',
                 boxShadow: '0 0 4px rgba(244, 67, 54, 0.5)',
               },
+              // Move the time display above the line instead of to the left
               '&::after': {
                 content: `"${currentTime.toLocaleTimeString('en-US', { 
                   hour: 'numeric',
@@ -727,8 +769,9 @@ const CalanderRight = ({
                   hour12: true 
                 })}"`,
                 position: 'absolute',
-                left: '8px',
-                top: isIPhoneSE ? '-11px' : '-10px',
+                left: '50%', // Center horizontally
+                top: '-20px', // Position above the line
+                transform: 'translateX(-50%)', // Center the text
                 fontSize: isIPhoneSE ? '0.6rem' : '0.75rem',
                 fontWeight: 'bold',
                 color: '#f44336',
