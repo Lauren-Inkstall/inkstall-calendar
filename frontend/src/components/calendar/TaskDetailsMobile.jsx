@@ -15,6 +15,8 @@ import {
   Paper,
   Switch,
   FormControlLabel,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EventIcon from '@mui/icons-material/Event';
@@ -29,6 +31,7 @@ const TaskDetailsMobile = ({ open, onClose, event }) => {
   console.log('TaskDetailsMobile rendered with props:', { open, event });
   
   const [editedEvent, setEditedEvent] = useState(null);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
 
   // Get current time in HH:MM format
   const getCurrentTime = () => {
@@ -314,11 +317,101 @@ const TaskDetailsMobile = ({ open, onClose, event }) => {
         </List>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} variant="outlined" fullWidth>
+      <DialogActions sx={{ p: 2, display: 'flex', gap: 2 }}>
+        <Button 
+          onClick={onClose} 
+          variant="outlined" 
+          sx={{ 
+            flex: 1,
+            color: '#555',
+            borderColor: '#ccc',
+            '&:hover': {
+              borderColor: '#999',
+              backgroundColor: '#f5f5f5'
+            }
+          }}
+        >
           Close
         </Button>
+        <Button 
+          onClick={() => {
+            // Prepare attendance data with automatic departure time
+            const attendanceData = {
+              students: editedEvent.students.map(student => ({
+                name: student.name,
+                attendance: student.attendance,
+                arrivalTime: student.arrivalTime,
+                // If student is present and has no departure time, use the event's end time
+                departureTime: student.attendance === 'present' && !student.departureTime 
+                  ? editedEvent.endTime 
+                  : student.departureTime
+              }))
+            };
+            
+            // Log the data that would be sent
+            console.log('Saving attendance data:', attendanceData);
+            
+            // Send data to the backend to update the createForms collection
+            fetch(`http://localhost:4000/api/create-form/${editedEvent.id || editedEvent._id}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(attendanceData),
+            })
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Failed to update attendance');
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log('Attendance updated successfully:', data);
+              
+              // Show success message and close modal
+              setOpenSnackbar(true);
+              setTimeout(() => {
+                onClose();
+              }, 500);
+            })
+            .catch(error => {
+              console.error('Error updating attendance:', error);
+              // You could add error handling here, like showing an error snackbar
+              alert('Failed to save attendance. Please try again.');
+            });
+          }} 
+          variant="contained" 
+          sx={{ 
+            flex: 1,
+            bgcolor: '#4caf50',
+            color: 'white',
+            '&:hover': {
+              bgcolor: '#388e3c',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+            },
+            transition: 'all 0.3s ease'
+          }}
+        >
+          Save
+        </Button>
       </DialogActions>
+      
+      {/* Success notification */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setOpenSnackbar(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setOpenSnackbar(false)} 
+          severity="success" 
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          Attendance saved successfully!
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };
