@@ -344,8 +344,8 @@ const NewEventForm = ({
           startTime: formData.startTime,
           duration: formData.duration,
           endTime: formData.endTime || '',
-          teacher: formData.teacherId, // Use teacherId instead of teacher name
-          teacherName: formData.teacher, // Add teacher name as a separate field
+          teacher: formData.teacher, // Use teacher name as the primary field
+          teacherId: formData.teacherId, // Keep teacher ID as a reference
           subject: formData.subject,
           branch: formData.branch,
           students: formData.students.map(studentName => {

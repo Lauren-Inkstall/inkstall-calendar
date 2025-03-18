@@ -292,22 +292,27 @@ const CalanderRight = ({
     return now > eventDate;
   };
 
-  // Check if teacher matches the event - improved to handle different teacher ID formats
+  // Check if teacher matches the event - updated to prioritize teacher name
   const isTeacherMatch = (event, teacher) => {
     if (!event || !teacher) return false;
     
-    // Handle different ways the teacher ID might be stored
-    const eventTeacherId = event.teacherId || event.teacher;
-    const teacherId = teacher.id;
+    // Prioritize matching by teacher name
+    const eventTeacherName = event.teacher || '';
+    const teacherName = teacher.name || '';
     
-    // Check various possible matches
+    // Fall back to ID matching for backward compatibility
+    const eventTeacherId = event.teacherId || '';
+    const teacherId = teacher.id || '';
+    
+    // Check various possible matches with name as priority
     return (
+      // Primary match by name
+      eventTeacherName === teacherName ||
+      // Fallback matches for backward compatibility
       eventTeacherId === teacherId ||
-      eventTeacherId === teacher.name ||
-      event.teacher === teacherId ||
-      event.teacher === teacher.name ||
-      (typeof eventTeacherId === 'object' && eventTeacherId.id === teacherId) ||
-      (typeof event.teacher === 'object' && event.teacher.id === teacherId)
+      event.teacherId === teacherName ||
+      (typeof event.teacher === 'object' && event.teacher?.name === teacherName) ||
+      (typeof event.teacher === 'object' && event.teacher?.id === teacherId)
     );
   };
 
@@ -318,31 +323,28 @@ const CalanderRight = ({
     // Debug: Log event and user data for comparison
     console.log('Checking if event belongs to current user:', {
       event,
-      eventTeacherId: event.teacherId || (typeof event.teacher === 'string' ? event.teacher : (event.teacher?.id || '')),
-      eventTeacherName: typeof event.teacher === 'string' ? event.teacher : (event.teacher?.name || ''),
-      eventTeacherEmail: event.teacherEmail || (event.teacher?.email || ''),
+      eventTeacher: event.teacher,
+      eventTeacherId: event.teacherId,
       currentUserId,
       userEmail,
       userName
     });
     
-    // Try to match by ID first (most reliable)
-    if (currentUserId) {
-      const eventTeacherId = event.teacherId || (typeof event.teacher === 'object' ? event.teacher?.id : '');
-      if (eventTeacherId === currentUserId) {
-        console.log('✅ Event matched by teacher ID:', event);
+    // Try to match by name first (most reliable)
+    if (userName) {
+      const eventTeacherName = event.teacher || '';
+      
+      if (eventTeacherName && eventTeacherName.toLowerCase() === userName.toLowerCase()) {
+        console.log('✅ Event matched by exact teacher name:', event);
         return true;
       }
     }
     
-    // For Test0001 case, exact username match
-    if (userName) {
-      const eventTeacherName = typeof event.teacher === 'string' 
-        ? event.teacher 
-        : (typeof event.teacher === 'object' ? event.teacher?.name : '');
-      
-      if (eventTeacherName && eventTeacherName.toLowerCase() === userName.toLowerCase()) {
-        console.log('✅ Event matched by exact teacher name:', event);
+    // Fall back to ID matching for backward compatibility
+    if (currentUserId) {
+      const eventTeacherId = event.teacherId || '';
+      if (eventTeacherId === currentUserId) {
+        console.log('✅ Event matched by teacher ID:', event);
         return true;
       }
     }
@@ -359,9 +361,7 @@ const CalanderRight = ({
     // As a last resort, check for username in teacher name or vice versa
     // But only if the match is very specific (to avoid false positives)
     if (userName) {
-      const eventTeacherName = typeof event.teacher === 'string' 
-        ? event.teacher 
-        : (typeof event.teacher === 'object' ? event.teacher?.name : '');
+      const eventTeacherName = event.teacher || '';
       
       if (eventTeacherName) {
         // Only consider this a match if one is fully contained in the other
