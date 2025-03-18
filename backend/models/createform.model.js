@@ -12,9 +12,9 @@ const CreateFormSchema = new mongoose.Schema({
   branch: { type: String, required: true },
   students: [{
     name: { type: String, required: true },
-    startTime: { type: String },
-    endTime: { type: String },
-    attendance: { type: String, default: 'absent' }, // Default attendance status
+    attendance: { type: String, default: 'absent', enum: ['present', 'absent'] },
+    arrivalTime: { type: String },
+    departureTime: { type: String },
   }],
   location: { type: String },
   color: { type: String, default: '#4285F4' }

@@ -32,9 +32,13 @@ const CalanderLeft = ({
   selectedDate,
   teachers,
   onToggleTeacher,
+  userRole, // Add userRole to the props
 }) => {
   const [openEventForm, setOpenEventForm] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Check if user is admin or superadmin (not teacher)
+  const canCreateEvents = userRole === 'admin' || userRole === 'superadmin';
 
   const filteredTeachers = teachers.filter((teacher) =>
     teacher.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -76,33 +80,34 @@ const CalanderLeft = ({
         borderRight: '1px solid #e0e0e0',
       }}
     >
-      {/* Add Event Button */}
-      <Button
-        variant="contained"
-        color="primary"
-        startIcon={<AddIcon />}
-        onClick={handleOpenEventForm}
-        sx={{
-          width: '130px',
-          mb: 2,
-          textTransform: 'none',
-          fontSize: '0.85rem',
-          p: 1,
-          backgroundColor: 'white', // Set background to white
-          color: 'black', // Set text color to black
-          borderRadius: '20px', // Add border radius
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // Add box shadow
-          '&:hover': {
-            // Optional: Add hover effect
-            backgroundColor: '#f0f0f0',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-          },
-        }}
-        fullWidth
-      >
-        Create
-      </Button>
-
+      {/* Add Event Button - Only show for admin and superadmin */}
+      {canCreateEvents && (
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={handleOpenEventForm}
+          sx={{
+            width: '130px',
+            mb: 2,
+            textTransform: 'none',
+            fontSize: '0.85rem',
+            p: 1,
+            backgroundColor: 'white', // Set background to white
+            color: 'black', // Set text color to black
+            borderRadius: '20px', // Add border radius
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)', // Add box shadow
+            '&:hover': {
+              // Optional: Add hover effect
+              backgroundColor: '#f0f0f0',
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+            },
+          }}
+          fullWidth
+        >
+          Create
+        </Button>
+      )}
       {/* Mini Calendar */}
       <Box sx={{ mb: 2 }}>
         <MiniCalendar selectedDate={selectedDate} onDateSelect={onDateSelect} />
@@ -219,6 +224,7 @@ CalanderLeft.propTypes = {
     }),
   ).isRequired,
   onToggleTeacher: PropTypes.func,
+  userRole: PropTypes.string.isRequired, // Add userRole prop type
 };
 
 export default CalanderLeft;

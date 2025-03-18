@@ -86,11 +86,6 @@ const CalanderRight = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Debug the userRole
-  useEffect(() => {
-    console.log('CalanderRight userRole:', userRole);
-  }, [userRole]);
-
   // Format date to display month and year
   const formatMonthYear = (date) => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -287,6 +282,11 @@ const CalanderRight = ({
 
   // Handle opening the event form
   const handleOpenEventForm = (hour, teacherId = null) => {
+    // Don't open the form for teachers
+    if (userRole === 'teacher') {
+      return;
+    }
+    
     // Format the hour to HH:MM format
     const formattedHour = `${hour.toString().padStart(2, '0')}:00`;
     setSelectedTime(formattedHour);
@@ -786,8 +786,10 @@ const CalanderRight = ({
                           }),
                         }}
                         onClick={() => {
-                          // Always allow creating events, even if teacher is on leave
-                          handleOpenEventForm(hour, teacher.id);
+                          // Only allow non-teachers to create events
+                          if (userRole !== 'teacher') {
+                            handleOpenEventForm(hour, teacher.id);
+                          }
                         }}
                       >
                         {/* Display events in this cell */}
@@ -1124,8 +1126,8 @@ const CalanderRight = ({
           </Typography>
         </Box>
 
-        {/* Right side - View mode buttons - hide for teachers on iPhone SE */}
-        {!(isIPhoneSE && userRole === 'teacher') && (
+        {/* Right side - View mode buttons - hide for teachers */}
+        {userRole !== 'teacher' && (
           <Box sx={{ display: 'flex' }}>
             <ButtonGroup
               variant="outlined"

@@ -42,11 +42,6 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
   const [success, setSuccess] = useState(false);
   const [editingAttendanceOnly, setEditingAttendanceOnly] = useState(false);
 
-  // Debug the userRole
-  useEffect(() => {
-    console.log('TaskDetailsModal userRole:', userRole);
-  }, [userRole]);
-
   // Determine if the user can edit or delete based on their role
   const canEdit = userRole === 'admin' || userRole === 'superadmin';
   const canDelete = userRole === 'admin' || userRole === 'superadmin';
@@ -57,16 +52,90 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
     return userRole === 'admin' || userRole === 'superadmin';
   };
 
+  // Handle attendance update for teacher role - directly calls API without edit mode
+  const handleTeacherAttendanceUpdate = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Make sure we're using the editedTask that contains the updated attendance data
+      // This is crucial as the attendance toggles update the editedTask state, not the task state
+      const updatedTask = { ...editedTask };
+      
+      // Format students data for the API according to the backend model
+      const formattedStudents = updatedTask.students.map(student => {
+        // For present students with no departure time, use the event's end time
+        let departureTime = student.departureTime;
+        if (student.attendance === 'present' && !departureTime) {
+          departureTime = updatedTask.endTime;
+        }
+        
+        return {
+          name: student.name,
+          attendance: student.attendance || 'absent',
+          arrivalTime: student.arrivalTime || null,
+          departureTime: departureTime || null
+        };
+      });
+      
+      // Create the payload with the properly formatted students data
+      const payload = {
+        ...updatedTask,
+        students: formattedStudents,
+        // Ensure teacher field is preserved exactly as it was
+        teacher: updatedTask.teacherId || updatedTask.teacher
+      };
+      
+      console.log('Sending attendance update:', payload);
+      
+      // Call the API to update the event
+      const response = await api.patch(
+        `/create-form/${task.id || task._id}`,
+        payload
+      );
+
+      if (response.status === 200) {
+        console.log('Attendance update successful:', response.data);
+        
+        // Format the response data to match what the calendar expects
+        const formattedResponse = {
+          ...response.data,
+          id: response.data._id || response.data.id,
+          _id: response.data._id || response.data.id,
+          teacherId: response.data.teacher || updatedTask.teacherId || updatedTask.teacher,
+          teacher: response.data.teacher || updatedTask.teacherId || updatedTask.teacher
+        };
+        
+        // Show success message
+        setSuccess(true);
+        
+        // Call the onUpdate function to update the UI
+        onUpdate(formattedResponse);
+        
+        // Close the modal after successful update
+        onClose();
+      } else {
+        console.error('Failed to update attendance:', response.data);
+        setError('Failed to update attendance. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      setError(error.message || 'An error occurred while updating attendance');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle attendance update for teacher role
-  const handleAttendance = () => {
-    // Set editing mode to true but only for attendance
-    setIsEditing(true);
-    setEditingAttendanceOnly(true);
-
-    console.log('Teacher updating attendance for event:', task);
-
-    // You can add specific logic here to only allow editing attendance fields
-    // For now, we'll just enable the editing mode
+  const handleAttendance = async () => {
+    if (isEditing) {
+      // If already in editing mode, save the changes
+      await handleUpdate();
+    } else {
+      // If not in editing mode, first enable editing for attendance only
+      setIsEditing(true);
+      setEditingAttendanceOnly(true);
+    }
   };
 
   // Format date for display
@@ -132,6 +201,7 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
     }));
   };
 
+  // Handle update
   const handleUpdate = async () => {
     try {
       setLoading(true);
@@ -145,10 +215,7 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
               name: student.name,
               attendance: student.attendance || 'absent',
               arrivalTime: student.arrivalTime || null,
-              departureTime: student.departureTime || null,
-              // Map frontend fields to backend model fields
-              startTime: student.arrivalTime || null,
-              endTime: student.departureTime || null
+              departureTime: student.departureTime || null
             };
           })
         : [];
@@ -161,8 +228,6 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
         teacher: editedTask.teacherId || editedTask.teacher
       };
 
-      console.log('Updating task with data:', updatedTask);
-
       // Call the API to update the event in the database
       const response = await api.patch(
         `/create-form/${task.id || task._id}`,
@@ -170,7 +235,6 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
       );
 
       if (response.status === 200) {
-        console.log('Event updated successfully:', response.data);
         // Show success message
         setSuccess(true);
         
@@ -183,9 +247,7 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
           teacherId: response.data.teacher || editedTask.teacherId || editedTask.teacher,
           teacher: response.data.teacher || editedTask.teacherId || editedTask.teacher
         };
-        
-        console.log('Formatted response for onUpdate:', formattedResponse);
-        
+                
         // Call the onUpdate function to update the UI with the formatted response data
         onUpdate(formattedResponse);
         setIsEditing(false);
@@ -206,13 +268,10 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
       setLoading(true);
       setError(null);
 
-      console.log('Deleting event with ID:', task.id || task._id);
-
       // Call the API to delete the event from the database
       const response = await api.delete(`/create-form/${task.id || task._id}`);
 
       if (response.status === 200) {
-        console.log('Event deleted successfully');
         // Show success message
         setSuccess(true);
         // Call the onDelete function to update the UI
@@ -277,8 +336,9 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
           return {
             name: student.name,
             attendance: student.attendance || 'absent',
-            arrivalTime: student.arrivalTime || null,
-            departureTime: student.departureTime || null,
+            // Use backend fields if available, otherwise use frontend fields
+            arrivalTime: student.arrivalTime || student.startTime || null,
+            departureTime: student.departureTime || student.endTime || null,
           };
         }
         return {
@@ -747,7 +807,7 @@ const TaskDetailsModal = ({ open, onClose, task, onUpdate, onDelete, userRole = 
               </>
             ) : (
               <Button
-                onClick={handleAttendance}
+                onClick={handleTeacherAttendanceUpdate}
                 color="primary"
                 variant="contained"
                 startIcon={<SaveIcon />}

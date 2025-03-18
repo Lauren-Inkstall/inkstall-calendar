@@ -20,6 +20,7 @@ const MainCalendar = () => {
   const [teachers, setTeachers] = useState([]);
   const [viewMode, setViewMode] = useState('Day'); 
   const [userRole, setUserRole] = useState(''); 
+  const [currentUserId, setCurrentUserId] = useState(''); 
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
@@ -30,7 +31,6 @@ const MainCalendar = () => {
       const storedRole = localStorage.getItem('userRole');
       if (storedRole) {
         setUserRole(storedRole);
-        console.log('User role from localStorage:', storedRole);
       } else {
         // If not in localStorage, check if there's a user object with role
         const userStr = localStorage.getItem('user');
@@ -38,16 +38,17 @@ const MainCalendar = () => {
           const user = JSON.parse(userStr);
           if (user && user.role) {
             setUserRole(user.role);
-            console.log('User role from user object:', user.role);
+            // Store the user ID if available
+            if (user._id) {
+              setCurrentUserId(user._id);
+            }
           } else {
             // Default to teacher if no role found
             setUserRole('teacher');
-            console.log('No role found, defaulting to teacher');
           }
         } else {
           // Default to teacher if no user found
           setUserRole('teacher');
-          console.log('No user found, defaulting to teacher');
         }
       }
     } catch (error) {
@@ -56,11 +57,6 @@ const MainCalendar = () => {
       setUserRole('teacher');
     }
   }, []);
-  
-  // Debug the userRole
-  useEffect(() => {
-    console.log('MainCalendar userRole:', userRole);
-  }, [userRole]);
 
   const isMobile = useMediaQuery('(max-width:768px)');
   const isIPhoneSE = useMediaQuery('(max-width:375px)'); 
@@ -73,8 +69,6 @@ const MainCalendar = () => {
         const response = await api.get('/create-form');
 
         if (response.status === 200 && response.data) {
-          console.log('Raw events from server:', response.data);
-          console.log('Number of events received:', response.data.length);
           
           // Format events for the calendar
           const formattedEvents = response.data.map(event => {
@@ -118,13 +112,6 @@ const MainCalendar = () => {
                     formattedEvent.date = parsedDate;
                   }
                 }
-                
-                // Log the formatted date for debugging
-                console.log(`Event ${formattedEvent.id} date:`, {
-                  originalDate: event.date,
-                  formattedDate: formattedEvent.date,
-                  isoString: formattedEvent.date.toISOString()
-                });
                 
               } catch (error) {
                 console.error(`Error formatting date for event ${formattedEvent.id}:`, error);
@@ -185,10 +172,6 @@ const MainCalendar = () => {
             event.startTime && event.startTime.startsWith('14:')
           );
           
-          console.log('Formatted events for calendar:', formattedEvents);
-          console.log('Number of formatted events:', formattedEvents.length);
-          console.log('Events by ID:', formattedEvents.map(e => e.id));
-          
           // Replace all events instead of trying to merge
           setEvents(formattedEvents);
         }
@@ -230,14 +213,6 @@ const MainCalendar = () => {
   };
 
   const handleAddEvent = (newEvent) => {
-    // Debug log to check the event data
-    console.log('Adding new event:', {
-      id: newEvent._id || newEvent.id,
-      title: newEvent.title,
-      teacherId: newEvent.teacherId,
-      teacher: newEvent.teacher,
-      originalTeacher: newEvent.teacher
-    });
     
     const eventWithColor = {
       ...newEvent,
@@ -245,8 +220,6 @@ const MainCalendar = () => {
       color: newEvent.color,
       teacherId: newEvent.teacherId || newEvent.teacher, // Ensure teacherId is set
     };
-
-    console.log('Formatted event for calendar:', eventWithColor);
 
     setEvents((prevEvents) => [...prevEvents, eventWithColor]);
     
@@ -256,7 +229,6 @@ const MainCalendar = () => {
 
   const handleUpdateEvent = (updatedEvent) => {
     try {
-      console.log('Updating event:', updatedEvent);
       
       // Ensure the updated event has all required fields
       const formattedEvent = {
@@ -288,18 +260,14 @@ const MainCalendar = () => {
         (e) => e.id === formattedEvent.id || e._id === formattedEvent._id
       );
       
-      console.log('Event index:', eventIndex);
-      
       if (eventIndex !== -1) {
         // Create a new array with the updated event
         const updatedEvents = [...events];
         updatedEvents[eventIndex] = formattedEvent;
-        
-        console.log('Updated events array:', updatedEvents);
+
         setEvents(updatedEvents);
       } else {
         // If event wasn't found, add it to the events array
-        console.log('Event not found, adding to events array');
         setEvents([...events, formattedEvent]);
       }
       
@@ -359,6 +327,7 @@ const MainCalendar = () => {
               teachers={teachers}
               onToggleTeacher={handleToggleTeacher}
               userRole={userRole}
+              currentUserId={currentUserId}
               isMobile={isMobile}
             />
           </Box>
