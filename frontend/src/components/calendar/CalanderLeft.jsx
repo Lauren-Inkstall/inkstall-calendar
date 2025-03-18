@@ -45,51 +45,18 @@ const CalanderLeft = ({
     const email = localStorage.getItem('userEmail');
     if (email) {
       setUserEmail(email);
-      console.log('CalanderLeft - User email from localStorage:', email);
     }
-    
-    // Debug: Log all localStorage items
-    console.log('CalanderLeft - localStorage items:', {
-      userRole: localStorage.getItem('userRole'),
-      userEmail: localStorage.getItem('userEmail'),
-      userName: localStorage.getItem('userName'),
-      user: localStorage.getItem('user')
-    });
   }, []);
 
   // Check if user is admin or superadmin (not teacher)
   const canCreateEvents = userRole === 'admin' || userRole === 'superadmin';
 
-  // Debug: Log teachers and user info
-  React.useEffect(() => {
-    if (teachers.length > 0) {
-      console.log('CalanderLeft - Available teachers:', teachers);
-      console.log('CalanderLeft - User role:', userRole);
-      console.log('CalanderLeft - User ID:', currentUserId);
-      console.log('CalanderLeft - User email:', userEmail);
-      console.log('CalanderLeft - User name:', currentUserName);
-    }
-  }, [teachers, userRole, currentUserId, userEmail, currentUserName]);
-
   // Filter teachers based on user role and email/ID
   const displayedTeachers = userRole === 'teacher'
     ? teachers.filter(teacher => {
-        // Debug: Log all teacher and user data for comparison
-        console.log('Comparing teacher to current user:', {
-          teacher,
-          teacherId: teacher.id,
-          teacherName: teacher.name,
-          teacherEmail: teacher.email,
-          currentUserId,
-          userEmail,
-          currentUserName,
-          userNameLower: currentUserName ? currentUserName.toLowerCase() : '',
-          teacherNameLower: teacher.name ? teacher.name.toLowerCase() : ''
-        });
-        
+
         // Try to match by ID first (most reliable)
         if (currentUserId && teacher.id === currentUserId) {
-          console.log('✅ Teacher matched by ID:', teacher);
           return true;
         }
         
@@ -97,7 +64,6 @@ const CalanderLeft = ({
         if (currentUserName && teacher.name) {
           const exactNameMatch = teacher.name.toLowerCase() === currentUserName.toLowerCase();
           if (exactNameMatch) {
-            console.log('✅ Teacher matched by exact name:', teacher);
             return true;
           }
         }
@@ -106,7 +72,6 @@ const CalanderLeft = ({
         if (userEmail && teacher.email) {
           const exactEmailMatch = teacher.email.toLowerCase() === userEmail.toLowerCase();
           if (exactEmailMatch) {
-            console.log('✅ Teacher matched by exact email:', teacher);
             return true;
           }
         }
@@ -124,12 +89,10 @@ const CalanderLeft = ({
           const teacherContainedInName = userNameLower.includes(teacherNameLower) && teacherNameLower.length >= 5;
           
           if (nameContainedInTeacher || teacherContainedInName) {
-            console.log('✅ Teacher matched by name inclusion:', teacher);
             return true;
           }
         }
         
-        console.log('❌ Teacher did not match current user:', teacher);
         return false;
       })
     : teachers.filter((teacher) =>

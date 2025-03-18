@@ -124,6 +124,7 @@ const NewEventForm = ({
     displayEndTime: '',
     teacher: '',
     teacherId: null,
+    teacherEmail: '', // Store the teacher's email
     subject: '',
     branch: '',
     students: [],
@@ -154,6 +155,7 @@ const NewEventForm = ({
           ...prev,
           teacher: selectedTeacher.name,
           teacherId: selectedTeacher.id,
+          teacherEmail: selectedTeacher.email || '', // Store the teacher's email
           color: selectedTeacher.color || prev.color,
         }));
       }
@@ -246,10 +248,15 @@ const NewEventForm = ({
   };
 
   const handleTeacherSelect = (teacherName, teacherId, teacherColor) => {
+    // Find the selected teacher to get their email
+    const selectedTeacher = teachers.find(teacher => teacher.id === teacherId);
+    const teacherEmail = selectedTeacher?.email || '';
+    
     setFormData({
       ...formData,
       teacher: teacherName,
       teacherId: teacherId,
+      teacherEmail: teacherEmail, // Store the teacher's email
       color: teacherColor || formData.color,
     });
     handleTeacherClose();
@@ -321,6 +328,7 @@ const NewEventForm = ({
       displayEndTime: '',
       teacher: initialTeacherId ? (teachers.find(t => t.id === initialTeacherId)?.name || '') : '',
       teacherId: initialTeacherId || null,
+      teacherEmail: initialTeacherId ? (teachers.find(t => t.id === initialTeacherId)?.email || '') : '', // Store the teacher's email
       subject: '',
       branch: '',
       students: [],
@@ -346,6 +354,7 @@ const NewEventForm = ({
           endTime: formData.endTime || '',
           teacher: formData.teacher, // Use teacher name as the primary field
           teacherId: formData.teacherId, // Keep teacher ID as a reference
+          teacherEmail: formData.teacherEmail, // Include teacher email for filtering
           subject: formData.subject,
           branch: formData.branch,
           students: formData.students.map(studentName => {
@@ -364,6 +373,7 @@ const NewEventForm = ({
         console.log('Submitting event data:', {
           teacherId: formData.teacherId,
           teacherName: formData.teacher,
+          teacherEmail: formData.teacherEmail,
           eventDataTeacher: eventData.teacher
         });
 

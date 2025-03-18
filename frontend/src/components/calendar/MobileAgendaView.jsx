@@ -24,14 +24,18 @@ import SearchIcon from '@mui/icons-material/Search';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import CloseIcon from '@mui/icons-material/Close';
 import TaskDetailsMobile from './TaskDetailsMobile';
+import PropTypes from 'prop-types';
 
 const MobileAgendaView = ({
   events = [],
   selectedDate,
   onEventClick,
+  onAddEvent,
   teachers,
   userRole = 'admin',
   currentTeacherId,
+  currentUserName,
+  currentUserEmail,
   getEventColor: externalGetEventColor
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -44,6 +48,21 @@ const MobileAgendaView = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredEvents, setFilteredEvents] = useState({});
   const theme = useTheme();
+  
+  // Get user email from localStorage
+  const [userEmail, setUserEmail] = useState('');
+  
+  // Get user email from localStorage on component mount
+  useEffect(() => {
+    if (userRole === 'teacher') {
+      const storedEmail = localStorage.getItem('userEmail');
+      if (storedEmail) {
+        setUserEmail(storedEmail);
+      } else {
+        console.warn('MobileAgendaView - No user email found in localStorage for teacher');
+      }
+    }
+  }, [userRole]);
 
   // Update current date when selectedDate changes
   useEffect(() => {
@@ -71,25 +90,43 @@ const MobileAgendaView = ({
       grouped[dateKey] = [];
     }
     
-    // Filter events based on teacher ID if in teacher role
-    const filteredEvents = userRole === 'teacher' && currentTeacherId
-      ? events.filter(event => {
-          const eventTeacherId = event.teacherId || event.teacher;
-          return (
-            eventTeacherId === currentTeacherId ||
-            event.teacher === currentTeacherId ||
-            (typeof eventTeacherId === 'object' && eventTeacherId.id === currentTeacherId) ||
-            (typeof event.teacher === 'object' && event.teacher.id === currentTeacherId)
-          );
-        })
-      : events;
+    // Filter events based on checked teachers
+    let filteredEvents = [...events]; // Create a copy to avoid modifying the original
     
-    console.log('Filtered events for mobile view:', {
-      total: events.length,
-      filtered: filteredEvents.length,
-      userRole,
-      currentTeacherId
-    });
+    // Get checked teachers
+    const checkedTeachers = teachers ? teachers.filter(teacher => teacher.checked) : [];
+
+    // Filter events to only include those from checked teachers
+    if (checkedTeachers.length > 0) {
+      filteredEvents = events.filter(event => {
+        // Check if the event belongs to any of the checked teachers
+        return checkedTeachers.some(teacher => {
+          // Match by teacher ID (most reliable)
+          if (event.teacherId && teacher.id === event.teacherId) {
+            return true;
+          }
+          
+          // Match by teacher object ID
+          if (typeof event.teacher === 'object' && event.teacher?.id === teacher.id) {
+            return true;
+          }
+          
+          // Match by teacher email
+          if (event.teacherEmail && teacher.email && 
+              event.teacherEmail.toLowerCase() === teacher.email.toLowerCase()) {
+            return true;
+          }
+          
+          // Match by teacher name
+          if (typeof event.teacher === 'string' && 
+              event.teacher.toLowerCase() === teacher.name.toLowerCase()) {
+            return true;
+          }
+          
+          return false;
+        });
+      });
+    }
     
     // Add events to their respective days
     filteredEvents.forEach(event => {
@@ -102,14 +139,23 @@ const MobileAgendaView = ({
         grouped[dateKey].sort((a, b) => {
           const aTime = a.startTime.split(':').map(Number);
           const bTime = b.startTime.split(':').map(Number);
-          return (aTime[0] * 60 + aTime[1]) - (bTime[0] * 60 + bTime[1]);
+          
+          // Compare hours first
+          if (aTime[0] !== bTime[0]) {
+            return aTime[0] - bTime[0];
+          }
+          
+          // If hours are the same, compare minutes
+          return aTime[1] - bTime[1];
         });
       }
     });
     
     setGroupedEvents(grouped);
-    setFilteredEvents(grouped); // Initialize filtered events with all events
-  }, [events, currentDate, userRole, currentTeacherId]);
+    
+    // Also update filtered events for search functionality
+    setFilteredEvents(grouped);
+  }, [events, currentDate, userRole, userEmail, currentTeacherId, currentUserName, teachers]);
 
   // Filter events based on search query
   useEffect(() => {
@@ -357,7 +403,6 @@ const MobileAgendaView = ({
 
   // Handle event click
   const handleEventClick = (event) => {
-    console.log('Event clicked:', event);
     setSelectedEvent(event);
     setDetailsOpen(true);
     // Don't call the external onEventClick to prevent double modals
@@ -783,6 +828,28 @@ const MobileAgendaView = ({
       />
     </Box>
   );
+};
+
+// Add PropTypes for type checking
+MobileAgendaView.propTypes = {
+  events: PropTypes.array,
+  selectedDate: PropTypes.instanceOf(Date),
+  onEventClick: PropTypes.func,
+  onAddEvent: PropTypes.func,
+  teachers: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      name: PropTypes.string,
+      email: PropTypes.string,
+      checked: PropTypes.bool,
+      color: PropTypes.string
+    })
+  ),
+  userRole: PropTypes.string,
+  currentTeacherId: PropTypes.string,
+  currentUserName: PropTypes.string,
+  currentUserEmail: PropTypes.string,
+  getEventColor: PropTypes.func
 };
 
 export default MobileAgendaView;

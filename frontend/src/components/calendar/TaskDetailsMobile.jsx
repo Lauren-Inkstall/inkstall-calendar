@@ -17,6 +17,7 @@ import {
   FormControlLabel,
   Snackbar,
   Alert,
+  Slide,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EventIcon from '@mui/icons-material/Event';
@@ -27,9 +28,11 @@ import GroupIcon from '@mui/icons-material/Group';
 import PersonIcon from '@mui/icons-material/Person';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 
-const TaskDetailsMobile = ({ open, onClose, event }) => {
-  console.log('TaskDetailsMobile rendered with props:', { open, event });
-  
+const SlideTransition = (props) => {
+  return <Slide {...props} direction="down" />;
+};
+
+const TaskDetailsMobile = ({ open, onClose, event }) => {  
   const [editedEvent, setEditedEvent] = useState(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
 
@@ -401,13 +404,34 @@ const TaskDetailsMobile = ({ open, onClose, event }) => {
         open={openSnackbar}
         autoHideDuration={3000}
         onClose={() => setOpenSnackbar(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        TransitionComponent={SlideTransition}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{
+          top: '20px',
+          '& .MuiSnackbarContent-root': {
+            minWidth: '300px',
+            borderRadius: '8px'
+          }
+        }}
       >
         <Alert 
           onClose={() => setOpenSnackbar(false)} 
           severity="success" 
           variant="filled"
-          sx={{ width: '100%' }}
+          elevation={6}
+          sx={{ 
+            width: '100%',
+            fontSize: '1rem',
+            alignItems: 'center',
+            boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+            '& .MuiAlert-icon': {
+              fontSize: '1.5rem',
+              marginRight: '12px'
+            },
+            '& .MuiAlert-action': {
+              paddingLeft: '16px'
+            }
+          }}
         >
           Attendance saved successfully!
         </Alert>

@@ -57,16 +57,7 @@ const MainCalendar = () => {
       const userName = localStorage.getItem('userName');
       if (userName) {
         setCurrentUserName(userName);
-        console.log('MainCalendar - User name from localStorage:', userName);
       }
-      
-      // Debug: Log all user info from localStorage
-      console.log('MainCalendar - User info from localStorage:', {
-        userRole: localStorage.getItem('userRole'),
-        userEmail: localStorage.getItem('userEmail'),
-        userName: localStorage.getItem('userName'),
-        user: localStorage.getItem('user')
-      });
     } catch (error) {
       console.error('Error getting user role:', error);
       // Default to teacher if there's an error
@@ -225,16 +216,6 @@ const MainCalendar = () => {
           color: defaultColors[index % defaultColors.length]
         };
       });
-      
-      // Debug log the formatted teachers
-      console.log('MainCalendar - Formatted teachers with checked status:', {
-        formattedTeachers,
-        userRole,
-        currentUserId,
-        currentUserName,
-        userEmail: localStorage.getItem('userEmail')
-      });
-      
       setTeachers(formattedTeachers);
     }
   }, [contextTeachers, userRole, currentUserId, currentUserName]);
@@ -335,7 +316,6 @@ const MainCalendar = () => {
   const handleToggleTeacher = (id) => {
     // For teacher role, don't allow toggling
     if (userRole === 'teacher') {
-      console.log('Teacher role cannot toggle teacher visibility');
       return;
     }
     

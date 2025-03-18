@@ -48,72 +48,19 @@ const CalanderRight = ({
   const [clickedWhatsAppEvents, setClickedWhatsAppEvents] = useState({}); // Add state to track clicked WhatsApp icons
   const [sentEvents, setSentEvents] = useState({}); // Add state to track events marked as sent
   const [userEmail, setUserEmail] = useState('');
-
-  // Add state for teacher leave data
-  const [teacherLeaveData, setTeacherLeaveData] = useState([]);
+  const [currentUserName, setCurrentUserName] = useState('');
 
   // Get user email from localStorage on component mount
   useEffect(() => {
     const email = localStorage.getItem('userEmail');
     if (email) {
       setUserEmail(email);
-      console.log('CalanderRight - User email from localStorage:', email);
     }
     
-    // Debug: Log all localStorage items
-    console.log('CalanderRight - localStorage items:', {
-      userRole: localStorage.getItem('userRole'),
-      userEmail: localStorage.getItem('userEmail'),
-      userName: localStorage.getItem('userName'),
-      user: localStorage.getItem('user')
-    });
-  }, []);
-
-  // Debug: Log events, teachers, and user info
-  useEffect(() => {
-    if (events.length > 0 && teachers.length > 0) {
-      console.log('CalanderRight - Events:', events);
-      console.log('CalanderRight - Teachers:', teachers);
-      console.log('CalanderRight - User role:', userRole);
-      console.log('CalanderRight - User ID:', currentUserId);
-      console.log('CalanderRight - User email:', userEmail);
+    const name = localStorage.getItem('userName');
+    if (name) {
+      setCurrentUserName(name);
     }
-  }, [events, teachers, userRole, currentUserId, userEmail]);
-
-  // Static test data for teacher leaves
-  useEffect(() => {
-    // In a real application, this would come from an API call
-    const staticLeaveData = [
-      {
-        teacherId: teachers && teachers.length > 0 ? teachers[0].id : null, // First teacher
-        date: new Date().toISOString().split('T')[0], // Today
-        status: 'leave',
-      }
-      // Add more test data as needed
-    ];
-
-    setTeacherLeaveData(staticLeaveData);
-  }, [teachers]);
-
-  // Log events for debugging
-  useEffect(() => {
-    if (selectedDate) {
-      setCurrentDate(new Date(selectedDate));
-    }
-  }, [selectedDate]);
-
-  // Update current time every 30 seconds for smoother movement
-  useEffect(() => {
-    const updateTime = () => {
-      setCurrentTime(new Date());
-    };
-    
-    // Set initial time
-    updateTime();
-    
-    const timer = setInterval(updateTime, 30000); // Update every 30 seconds
-
-    return () => clearInterval(timer);
   }, []);
 
   // Add a ref for the day view container to enable scrolling
@@ -128,7 +75,7 @@ const CalanderRight = ({
         const currentMinute = currentTime.getMinutes();
         
         // Calculate position: 80px header + 60px per hour
-        const timePosition = ((currentHour + currentMinute / 60) * 60) + 80;
+        const timePosition = ((currentHour + currentMinute / 60) * 60) + 80; // 80px is header height
         
         // Get the container's height
         const containerHeight = dayViewRef.current.clientHeight;
@@ -140,14 +87,6 @@ const CalanderRight = ({
         dayViewRef.current.scrollTo({
           top: Math.max(0, scrollPosition),
           behavior: 'smooth'
-        });
-        
-        console.log('Auto-scrolled to center current time:', {
-          currentHour,
-          currentMinute,
-          timePosition,
-          containerHeight,
-          scrollPosition
         });
       }, 100);
     }
@@ -320,22 +259,11 @@ const CalanderRight = ({
   const isCurrentUserEvent = (event) => {
     if (!event || userRole !== 'teacher') return true;
     
-    // Debug: Log event and user data for comparison
-    console.log('Checking if event belongs to current user:', {
-      event,
-      eventTeacher: event.teacher,
-      eventTeacherId: event.teacherId,
-      currentUserId,
-      userEmail,
-      userName
-    });
-    
     // Try to match by name first (most reliable)
     if (userName) {
       const eventTeacherName = event.teacher || '';
       
       if (eventTeacherName && eventTeacherName.toLowerCase() === userName.toLowerCase()) {
-        console.log('✅ Event matched by exact teacher name:', event);
         return true;
       }
     }
@@ -344,7 +272,6 @@ const CalanderRight = ({
     if (currentUserId) {
       const eventTeacherId = event.teacherId || '';
       if (eventTeacherId === currentUserId) {
-        console.log('✅ Event matched by teacher ID:', event);
         return true;
       }
     }
@@ -353,7 +280,6 @@ const CalanderRight = ({
     if (userEmail) {
       const eventTeacherEmail = event.teacherEmail || (typeof event.teacher === 'object' ? event.teacher?.email : '');
       if (eventTeacherEmail && eventTeacherEmail.toLowerCase() === userEmail.toLowerCase()) {
-        console.log('✅ Event matched by exact teacher email:', event);
         return true;
       }
     }
@@ -374,13 +300,11 @@ const CalanderRight = ({
         const teacherContainedInName = userNameLower.includes(teacherNameLower) && teacherNameLower.length >= 5;
         
         if (nameContainedInTeacher || teacherContainedInName) {
-          console.log('✅ Event matched by name inclusion:', event);
           return true;
         }
       }
     }
     
-    console.log('❌ Event did not match current user:', event);
     return false;
   };
 
@@ -586,17 +510,6 @@ const CalanderRight = ({
       onDeleteEvent(taskId);
     }
     setOpenTaskModal(false);
-  };
-
-  // Check if a teacher is on leave for the current day
-  const isTeacherOnLeave = (teacherId) => {
-    const currentDateStr = currentDate.toISOString().split('T')[0];
-    return teacherLeaveData.some(
-      (leave) =>
-        leave.teacherId === teacherId &&
-        leave.date === currentDateStr &&
-        leave.status === 'leave',
-    );
   };
 
   // Render day view events
@@ -825,8 +738,6 @@ const CalanderRight = ({
             {/* Teacher Headers - only show if there are visible teachers */}
             {visibleTeachers.length > 0 ? (
               visibleTeachers.map((teacher, index) => {
-                const onLeave = isTeacherOnLeave(teacher.id);
-
                 return (
                   <Box
                     key={teacher.id}
@@ -849,17 +760,6 @@ const CalanderRight = ({
                       zIndex: 10,
                       transition: 'all 0.2s ease-in-out',
                       overflow: 'hidden',
-                      ...(onLeave && {
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: '3px',
-                          backgroundColor: '#f44336',
-                        },
-                      }),
                     }}
                   >
                     <Box
@@ -977,9 +877,6 @@ const CalanderRight = ({
                       }
                     });
 
-                    // Check if teacher is on leave
-                    const onLeave = isTeacherOnLeave(teacher.id);
-
                     return (
                       <Box
                         key={`${hour}-${teacher.id}`}
@@ -997,19 +894,9 @@ const CalanderRight = ({
                           position: 'relative',
                           cursor: userRole !== 'teacher' ? 'pointer' : 'default', // Only show pointer cursor for non-teachers
                           '&:hover': {
-                            backgroundColor: onLeave
-                              ? 'rgba(0, 0, 0, 0.02)'
-                              : userRole !== 'teacher' ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
                           },
-                          backgroundColor: onLeave
-                            ? 'rgba(244, 67, 54, 0.03)'
-                            : 'transparent',
-                          opacity: onLeave ? 0.85 : 1,
                           transition: 'all 0.2s ease-in-out',
-                          ...(onLeave && {
-                            backgroundImage:
-                              'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(244, 67, 54, 0.03) 10px, rgba(244, 67, 54, 0.03) 20px)',
-                          }),
                         }}
                         onClick={() => {
                           // Always allow creating events, even if teacher is on leave
@@ -1025,45 +912,10 @@ const CalanderRight = ({
                           
                           return (
                             <React.Fragment key={eventKey}>
-                              {renderDayViewEvent(event, teacher, onLeave, isIPhoneSE)}
+                              {renderDayViewEvent(event, teacher, false, isIPhoneSE)}
                             </React.Fragment>
                           );
                         })}
-
-                        {/* Show "On Leave" indicator if teacher is on leave and no events */}
-                        {onLeave && hourEvents.length === 0 && (
-                          <Box
-                            sx={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              color: '#f44336',
-                              textAlign: 'center',
-                              width: '90%',
-                              backgroundColor: 'rgba(244, 67, 54, 0.05)',
-                              borderRadius: '4px',
-                              py: 0.5,
-                              px: 1,
-                              border: '1px dashed rgba(244, 67, 54, 0.3)',
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                fontStyle: 'italic',
-                                fontWeight: 'medium',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 0.5,
-                                fontSize: isIPhoneSE ? '0.6rem' : '0.7rem'
-                              }}
-                            >
-                              On Leave
-                            </Typography>
-                          </Box>
-                        )}
                       </Box>
                     );
                   })
@@ -1246,6 +1098,9 @@ const CalanderRight = ({
           onAddEvent={() => handleOpenEventForm(new Date().getHours())}
           teachers={teachers}
           userRole={userRole}
+          currentTeacherId={currentUserId}
+          currentUserName={currentUserName}
+          currentUserEmail={userEmail}
         />
       );
     }
@@ -1300,148 +1155,149 @@ const CalanderRight = ({
       }}
     >
       {/* Top Navigation - simplified for iPhone SE */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: isIPhoneSE ? 1 : 2,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderBottom: '1px solid #e0e0e0',
-          width: '100%',
-          maxWidth: '100%',
-        }}
-      >
-        {/* Left side - Today button and navigation */}
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          {/* Hide Today button on iPhone SE */}
-          {!isIPhoneSE && (
-            <Button
-              onClick={handleToday}
-              sx={{
-                textTransform: 'none',
-                px: 3,
-                borderColor: viewMode === 'Today' ? 'transparent' : '#e0e0e0',
-                backgroundColor: viewMode === 'Today' ? '#000066' : 'white',
-                color: viewMode === 'Today' ? 'white' : '#000066',
-                '&:hover': {
-                  backgroundColor: viewMode === 'Today' ? '#000066' : '#f5f5f5',
-                  borderColor: viewMode === 'Today' ? 'transparent' : '#e0e0e0',
-                },
-                fontWeight: 'bold',
-              }}
-            >
-              Today
-            </Button>
-          )}
-
-          <IconButton onClick={handlePrevious} size="small">
-            <ArrowBackIosNewIcon fontSize="small" />
-          </IconButton>
-
-          <IconButton onClick={handleNext} size="small" sx={{ mr: 2 }}>
-            <ArrowForwardIosIcon fontSize="small" />
-          </IconButton>
-
-          <Typography variant="h6" component="div" sx={{ fontWeight: 'normal', fontSize: isIPhoneSE ? '0.9rem' : 'inherit' }}>
-            {viewMode === 'Day'
-              ? formatDay(currentDate)
-              : formatMonthYear(currentDate)}
-          </Typography>
-        </Box>
-
-        {/* Right side - View mode buttons - hide for teachers */}
-        {userRole !== 'teacher' && (
-          <Box sx={{ display: 'flex' }}>
-            <ButtonGroup
-              variant="outlined"
-              sx={{
-                borderRadius: '8px',
-                overflow: 'hidden',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              }}
-            >
-              <Button
-                onClick={() => handleViewChange('Day')}
-                sx={{
-                  textTransform: 'none',
-                  px: isIPhoneSE ? 1 : 3,
-                  fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
-                  borderColor: viewMode === 'Day' ? 'transparent' : '#e0e0e0',
-                  backgroundColor: viewMode === 'Day' ? '#000066' : 'white',
-                  color: viewMode === 'Day' ? 'white' : '#000066',
-                  '&:hover': {
-                    backgroundColor: viewMode === 'Day' ? '#000066' : '#f5f5f5',
-                    borderColor: viewMode === 'Day' ? 'transparent' : '#e0e0e0',
-                  },
-                  fontWeight: 'bold',
-                }}
-              >
-                Day
-              </Button>
-
-              <Button
-                onClick={() => handleViewChange('Week')}
-                sx={{
-                  textTransform: 'none',
-                  px: isIPhoneSE ? 1 : 3,
-                  fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
-                  borderColor: viewMode === 'Week' ? 'transparent' : '#e0e0e0',
-                  backgroundColor: viewMode === 'Week' ? '#3366cc' : 'white',
-                  color: viewMode === 'Week' ? 'white' : '#3366cc',
-                  '&:hover': {
-                    backgroundColor: viewMode === 'Week' ? '#3366cc' : '#f5f5f5',
-                    borderColor: viewMode === 'Week' ? 'transparent' : '#e0e0e0',
-                  },
-                  fontWeight: 'bold',
-                }}
-              >
-                Week
-              </Button>
-
-              <Button
-                onClick={() => handleViewChange('Month')}
-                sx={{
-                  textTransform: 'none',
-                  px: isIPhoneSE ? 1 : 3,
-                  fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
-                  borderColor: viewMode === 'Month' ? 'transparent' : '#e0e0e0',
-                  backgroundColor: viewMode === 'Month' ? '#ffcc00' : 'white',
-                  color: viewMode === 'Month' ? '#000000' : '#ffcc00',
-                  '&:hover': {
-                    backgroundColor: viewMode === 'Month' ? '#ffcc00' : '#f5f5f5',
-                    borderColor: viewMode === 'Month' ? 'transparent' : '#e0e0e0',
-                  },
-                  fontWeight: 'bold',
-                }}
-              >
-                Month
-              </Button>
-
-              <Button
-                onClick={() => handleViewChange('Agenda')}
-                sx={{
-                  textTransform: 'none',
-                  px: isIPhoneSE ? 1 : 3,
-                  fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
-                  borderColor: viewMode === 'Agenda' ? 'transparent' : '#e0e0e0',
-                  backgroundColor: viewMode === 'Agenda' ? '#000066' : 'white',
-                  color: viewMode === 'Agenda' ? 'white' : '#000066',
-                  '&:hover': {
-                    backgroundColor:
-                      viewMode === 'Agenda' ? '#000066' : '#f5f5f5',
-                    borderColor:
-                      viewMode === 'Agenda' ? 'transparent' : '#e0e0e0',
-                  },
-                  fontWeight: 'bold',
-                }}
-              >
-                Agenda
-              </Button>
-            </ButtonGroup>
-          </Box>
-        )}
-      </Paper>
+      {userRole !== 'teacher' &&
+            <Paper
+            elevation={0}
+            sx={{
+              p: isIPhoneSE ? 1 : 2,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #e0e0e0',
+              width: '100%',
+              maxWidth: '100%',
+            }}
+          >
+            {/* Left side - Today button and navigation */}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {/* Hide Today button on iPhone SE */}
+              {!isIPhoneSE && (
+                <Button
+                  onClick={handleToday}
+                  sx={{
+                    textTransform: 'none',
+                    px: 3,
+                    borderColor: viewMode === 'Today' ? 'transparent' : '#e0e0e0',
+                    backgroundColor: viewMode === 'Today' ? '#000066' : 'white',
+                    color: viewMode === 'Today' ? 'white' : '#000066',
+                    '&:hover': {
+                      backgroundColor: viewMode === 'Today' ? '#000066' : '#f5f5f5',
+                      borderColor: viewMode === 'Today' ? 'transparent' : '#e0e0e0',
+                    },
+                    fontWeight: 'bold',
+                  }}
+                >
+                  Today
+                </Button>
+              )}
+    
+              <IconButton onClick={handlePrevious} size="small">
+                <ArrowBackIosNewIcon fontSize="small" />
+              </IconButton>
+    
+              <IconButton onClick={handleNext} size="small" sx={{ mr: 2 }}>
+                <ArrowForwardIosIcon fontSize="small" />
+              </IconButton>
+    
+              <Typography variant="h6" component="div" sx={{ fontWeight: 'normal', fontSize: isIPhoneSE ? '0.9rem' : 'inherit' }}>
+                {viewMode === 'Day'
+                  ? formatDay(currentDate)
+                  : formatMonthYear(currentDate)}
+              </Typography>
+            </Box>
+    
+            {/* Right side - View mode buttons - hide for teachers */}
+            {userRole !== 'teacher' && (
+              <Box sx={{ display: 'flex' }}>
+                <ButtonGroup
+                  variant="outlined"
+                  sx={{
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  <Button
+                    onClick={() => handleViewChange('Day')}
+                    sx={{
+                      textTransform: 'none',
+                      px: isIPhoneSE ? 1 : 3,
+                      fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
+                      borderColor: viewMode === 'Day' ? 'transparent' : '#e0e0e0',
+                      backgroundColor: viewMode === 'Day' ? '#000066' : 'white',
+                      color: viewMode === 'Day' ? 'white' : '#000066',
+                      '&:hover': {
+                        backgroundColor: viewMode === 'Day' ? '#000066' : '#f5f5f5',
+                        borderColor: viewMode === 'Day' ? 'transparent' : '#e0e0e0',
+                      },
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    Day
+                  </Button>
+    
+                  <Button
+                    onClick={() => handleViewChange('Week')}
+                    sx={{
+                      textTransform: 'none',
+                      px: isIPhoneSE ? 1 : 3,
+                      fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
+                      borderColor: viewMode === 'Week' ? 'transparent' : '#e0e0e0',
+                      backgroundColor: viewMode === 'Week' ? '#3366cc' : 'white',
+                      color: viewMode === 'Week' ? 'white' : '#3366cc',
+                      '&:hover': {
+                        backgroundColor: viewMode === 'Week' ? '#3366cc' : '#f5f5f5',
+                        borderColor: viewMode === 'Week' ? 'transparent' : '#e0e0e0',
+                      },
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    Week
+                  </Button>
+    
+                  <Button
+                    onClick={() => handleViewChange('Month')}
+                    sx={{
+                      textTransform: 'none',
+                      px: isIPhoneSE ? 1 : 3,
+                      fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
+                      borderColor: viewMode === 'Month' ? 'transparent' : '#e0e0e0',
+                      backgroundColor: viewMode === 'Month' ? '#ffcc00' : 'white',
+                      color: viewMode === 'Month' ? '#000000' : '#ffcc00',
+                      '&:hover': {
+                        backgroundColor: viewMode === 'Month' ? '#ffcc00' : '#f5f5f5',
+                        borderColor: viewMode === 'Month' ? 'transparent' : '#e0e0e0',
+                      },
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    Month
+                  </Button>
+    
+                  <Button
+                    onClick={() => handleViewChange('Agenda')}
+                    sx={{
+                      textTransform: 'none',
+                      px: isIPhoneSE ? 1 : 3,
+                      fontSize: isIPhoneSE ? '0.7rem' : 'inherit',
+                      borderColor: viewMode === 'Agenda' ? 'transparent' : '#e0e0e0',
+                      backgroundColor: viewMode === 'Agenda' ? '#000066' : 'white',
+                      color: viewMode === 'Agenda' ? 'white' : '#000066',
+                      '&:hover': {
+                        backgroundColor:
+                          viewMode === 'Agenda' ? '#000066' : '#f5f5f5',
+                        borderColor:
+                          viewMode === 'Agenda' ? 'transparent' : '#e0e0e0',
+                      },
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    Agenda
+                  </Button>
+                </ButtonGroup>
+              </Box>
+            )}
+          </Paper>}
 
       {/* Calendar Content */}
       <Box
